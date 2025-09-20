@@ -1,0 +1,49 @@
+{
+  "display_name": "GPT-4 Turbo with Zero Trust Security",
+  "model_type": "openai",
+  "model_name": "gpt-4-turbo-preview",
+  "metadata": {
+    "agent_proxy": {
+      "class_name": "zero_trust_ai_gateway.services.agentproxies.openai.OpenAIAgentProxy",
+      "config": {
+        "api_version": "2024-02-01",
+        "max_tokens": 4000,
+        "temperature": 0.7,
+        "request_timeout": 30.0,
+        "max_retries": 3,
+        "content_filtering": true,
+        "prompt_injection_detection": true,
+        "connection_pool_size": 10
+      }
+    },
+    "security_policy": {
+      "authorized_users": ["admin", "senior_developer", "data_scientist"],
+      "unauthorized_users": ["guest", "temp_user"],
+      "required_capabilities": ["text_generation", "code_generation", "math_reasoning"],
+      "rate_limit_per_user": 100,
+      "max_context_length": 8000,
+      "sensitive_data_detection": true,
+      "prompt_injection_protection": true
+    },
+    "compliance": {
+      "audit_logging": true,
+      "pii_detection": true,
+      "data_retention_days": 90,
+      "encryption_at_rest": true,
+      "gdpr_compliant": true,
+      "hipaa_compliant": false
+    },
+    "performance": {
+      "target_latency_ms": 10,
+      "cache_enabled": true,
+      "batch_processing": true,
+      "connection_pooling": true,
+      "memory_optimization": true
+    },
+    "cost_optimization": {
+      "token_usage_monitoring": true,
+      "cost_limits_per_user": 100.0,
+      "automatic_model_selection": false
+    }
+  }
+}

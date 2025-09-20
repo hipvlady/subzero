@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  zero-trust-gateway:
+    build:
+      context: ../../
+      dockerfile: etc/docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ZTAG_AUTH0_DOMAIN=${AUTH0_DOMAIN:-demo-tenant.auth0.com}
+      - ZTAG_CLIENT_ID=${AUTH0_CLIENT_ID:-demo_client_id}
+      - ZTAG_PRIVATE_KEY=${AUTH0_PRIVATE_KEY:-demo_private_key}
+      - ZTAG_FGA_API_URL=${FGA_API_URL:-https://api.fga.dev}
+      - ZTAG_FGA_STORE_ID=${FGA_STORE_ID:-demo_store_id}
+      - ZTAG_OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ZTAG_DEFAULT_MODEL=${DEFAULT_MODEL:-gpt-3.5-turbo}
+      - ZTAG_MAX_AGENTS_PER_USER=10
+      - ZTAG_RATE_LIMIT_PER_MINUTE=100
+      - ZTAG_CONNECTION_POOL_SIZE=100
+      - ZTAG_BATCH_SIZE=100
+      - ZTAG_CACHE_SIZE=100000
+      - ZTAG_CONTENT_FILTERING=true
+      - ZTAG_PROMPT_INJECTION_DETECTION=true
+      - ZTAG_LOG_LEVEL=INFO
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - ztag-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - ztag-network
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks:
+      - ztag-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - ztag-network
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  ztag-network:
+    driver: bridge
