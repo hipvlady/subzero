@@ -18,6 +18,20 @@ class Settings(BaseSettings):
     CACHE_CAPACITY: int = 10000
     MAX_CONNECTIONS: int = 1000
     CONNECTION_POOL_SIZE: int = 100
+
+    # Multiprocessing Settings
+    ENABLE_MULTIPROCESSING: bool = True
+    JWT_PROCESSOR_WORKERS: int = 4
+    HASH_PROCESSOR_WORKERS: int = 2
+    VERIFICATION_WORKERS: int = 2
+    SHARED_MEMORY_SIZE: int = 10_000_000  # 10MB
+    PROCESS_POOL_TIMEOUT: int = 30
+    BATCH_SIZE_THRESHOLD: int = 10  # Minimum batch size for multiprocessing
+
+    # Process Pool Configuration
+    PROCESS_START_METHOD: str = "spawn"  # Options: fork, spawn, forkserver
+    NUMA_AWARE_PLACEMENT: bool = True
+    CPU_AFFINITY_ENABLED: bool = True
     
     # Security Settings
     ENABLE_BOT_DETECTION: bool = True
