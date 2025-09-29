@@ -626,6 +626,248 @@ class XAAProtocol:
             'e': to_base64url(public_numbers.e, 3)
         }
 
+    async def send_app_request(
+        self,
+        token: str,
+        target_app_id: str,
+        method: str,
+        endpoint: str,
+        payload: Optional[Dict] = None
+    ) -> Dict:
+        """
+        Send authenticated request to registered application
+        Bidirectional communication: Agent → App
+
+        Args:
+            token: XAA access token
+            target_app_id: Target application ID
+            method: HTTP method (GET, POST, PUT, DELETE)
+            endpoint: API endpoint path
+            payload: Request payload
+
+        Returns:
+            Response from target application
+        """
+        # Verify token
+        try:
+            claims = await self.verify_token(token)
+
+            # Check if audience matches target app
+            if claims.get('aud') != target_app_id:
+                return {
+                    'success': False,
+                    'error': 'Token audience mismatch',
+                    'expected': target_app_id,
+                    'actual': claims.get('aud')
+                }
+
+            # Get app registration
+            app = self.applications.get(target_app_id)
+            if not app:
+                return {
+                    'success': False,
+                    'error': f'Application {target_app_id} not registered'
+                }
+
+            # Construct callback URL
+            if not app.callback_urls:
+                return {
+                    'success': False,
+                    'error': 'No callback URLs configured for application'
+                }
+
+            base_url = app.callback_urls[0]  # Use first callback URL
+            url = f"{base_url}/{endpoint.lstrip('/')}"
+
+            # Send authenticated request
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json',
+                'X-XAA-Version': '1.0',
+                'X-Delegation-Chain': claims.get('xaa_chain_id', '')
+            }
+
+            method = method.upper()
+
+            async with aiohttp.ClientSession() as session:
+                if method == 'GET':
+                    async with session.get(url, headers=headers) as response:
+                        result = await response.json() if response.status == 200 else await response.text()
+                        return {
+                            'success': response.status in [200, 201],
+                            'status_code': response.status,
+                            'data': result
+                        }
+
+                elif method in ['POST', 'PUT', 'PATCH']:
+                    async with session.request(method, url, headers=headers, json=payload) as response:
+                        result = await response.json() if response.status in [200, 201] else await response.text()
+                        return {
+                            'success': response.status in [200, 201],
+                            'status_code': response.status,
+                            'data': result
+                        }
+
+                elif method == 'DELETE':
+                    async with session.delete(url, headers=headers) as response:
+                        return {
+                            'success': response.status in [200, 204],
+                            'status_code': response.status
+                        }
+
+                else:
+                    return {
+                        'success': False,
+                        'error': f'Unsupported method: {method}'
+                    }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Request failed: {str(e)}'
+            }
+
+    async def receive_app_callback(
+        self,
+        callback_token: str,
+        data: Dict,
+        source_app_id: str
+    ) -> Dict:
+        """
+        Receive callback from registered application
+        Bidirectional communication: App → Agent
+
+        Args:
+            callback_token: XAA callback token
+            data: Callback payload
+            source_app_id: Source application ID
+
+        Returns:
+            Processing result
+        """
+        try:
+            # Verify callback token
+            claims = await self.verify_token(callback_token)
+
+            # Verify source app
+            if source_app_id not in self.applications:
+                return {
+                    'success': False,
+                    'error': f'Unknown source application: {source_app_id}'
+                }
+
+            # Extract callback metadata
+            callback_type = data.get('type', 'notification')
+            callback_payload = data.get('payload', {})
+
+            print(f"📥 Callback received from {source_app_id}: {callback_type}")
+
+            # Process based on callback type
+            if callback_type == 'approval_request':
+                # Human-in-the-loop approval workflow
+                return {
+                    'success': True,
+                    'action': 'approval_pending',
+                    'callback_id': callback_payload.get('request_id')
+                }
+
+            elif callback_type == 'notification':
+                # Generic notification
+                return {
+                    'success': True,
+                    'action': 'notification_received'
+                }
+
+            elif callback_type == 'data_response':
+                # Data query response
+                return {
+                    'success': True,
+                    'action': 'data_received',
+                    'data': callback_payload
+                }
+
+            elif callback_type == 'error':
+                # Error notification
+                return {
+                    'success': True,
+                    'action': 'error_received',
+                    'error': callback_payload.get('message')
+                }
+
+            else:
+                return {
+                    'success': False,
+                    'error': f'Unknown callback type: {callback_type}'
+                }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Callback processing failed: {str(e)}'
+            }
+
+    async def establish_bidirectional_channel(
+        self,
+        agent_id: str,
+        app_id: str,
+        scopes: Set[str]
+    ) -> Dict:
+        """
+        Establish bidirectional communication channel
+        Agent ↔ App persistent connection
+
+        Args:
+            agent_id: Agent identifier
+            app_id: Application identifier
+            scopes: Communication scopes
+
+        Returns:
+            Channel establishment result with tokens
+        """
+        # Verify app is registered
+        app = self.applications.get(app_id)
+        if not app:
+            return {
+                'success': False,
+                'error': f'Application {app_id} not registered'
+            }
+
+        # Issue agent→app token
+        agent_to_app_token = await self.issue_token(
+            subject=agent_id,
+            audience=app_id,
+            scopes=scopes,
+            token_type=XAATokenType.PRIMARY,
+            metadata={'direction': 'agent_to_app'}
+        )
+
+        # Issue app→agent callback token
+        app_to_agent_token = await self.issue_token(
+            subject=app_id,
+            audience=agent_id,
+            scopes={'xaa:callback'},
+            token_type=XAATokenType.PRIMARY,
+            metadata={'direction': 'app_to_agent'}
+        )
+
+        # Store channel metadata
+        channel_id = f"channel_{agent_id}_{app_id}_{int(time.time())}"
+
+        print(f"🔗 Bidirectional channel established: {agent_id} ↔ {app_id}")
+
+        return {
+            'success': True,
+            'channel_id': channel_id,
+            'agent_to_app_token': agent_to_app_token,
+            'app_to_agent_token': app_to_agent_token,
+            'expires_in': 3600,
+            'capabilities': {
+                'send_requests': True,
+                'receive_callbacks': True,
+                'streaming': False  # Future enhancement
+            }
+        }
+
     async def close(self):
         """Close resources"""
         if hasattr(self, 'session'):
