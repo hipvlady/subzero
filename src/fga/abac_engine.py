@@ -12,7 +12,7 @@ Features:
 
 import time
 import math
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 from datetime import datetime, time as dt_time

@@ -105,7 +105,7 @@ class ObjectType:
     relations: Dict[str, RelationDefinition] = field(default_factory=dict)
 
 
-class ReBAC Engine:
+class ReBACEngine:
     """
     Relationship-Based Access Control Engine
     Implements Zanzibar-style authorization with graph traversal
