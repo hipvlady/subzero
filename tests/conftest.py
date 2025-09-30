@@ -24,8 +24,8 @@ os.environ.setdefault("FGA_CLIENT_ID", "test_fga_client")
 os.environ.setdefault("FGA_CLIENT_SECRET", "test_fga_secret")
 os.environ.setdefault("FGA_API_URL", "https://api.test.fga.dev")
 
-from subzero.services.auth.manager import Auth0Configuration
-from subzero.subzeroapp import UnifiedZeroTrustGateway
+from subzero.services.auth.manager import Auth0Configuration  # noqa: E402
+from subzero.subzeroapp import UnifiedZeroTrustGateway  # noqa: E402
 
 # ========================================
 # Event Loop Configuration
