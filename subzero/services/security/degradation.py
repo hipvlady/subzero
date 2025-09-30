@@ -229,9 +229,9 @@ class GracefulDegradationService:
                     metadata={
                         "old_mode": old_mode.value,
                         "new_mode": new_mode.value,
-                        "degradation_duration": time.time() - self.degradation_started
-                        if self.degradation_started
-                        else 0,
+                        "degradation_duration": (
+                            time.time() - self.degradation_started if self.degradation_started else 0
+                        ),
                     },
                 )
             )
@@ -375,9 +375,9 @@ class GracefulDegradationService:
             await self.audit_service.log_event(
                 AuditEvent(
                     event_id=f"cached_authz_{time.time()}",
-                    event_type=AuditEventType.PERMISSION_GRANTED
-                    if cached.allowed
-                    else AuditEventType.PERMISSION_DENIED,
+                    event_type=(
+                        AuditEventType.PERMISSION_GRANTED if cached.allowed else AuditEventType.PERMISSION_DENIED
+                    ),
                     severity=AuditSeverity.LOW,
                     actor_id=user_id,
                     resource_type=resource_type,

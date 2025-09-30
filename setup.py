@@ -65,7 +65,7 @@ setup(
             'pytest-asyncio>=0.23',
             'pytest-cov>=4.1',
             'pytest-benchmark>=4.0',
-            'black>=23.12',
+            'black>=25.9',
             'ruff>=0.1',
             'mypy>=1.8',
             'sphinx>=7.2',

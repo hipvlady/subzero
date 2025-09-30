@@ -254,9 +254,9 @@ class ISPMEngine:
                         category=rule.name,
                         description=result.get("description", rule.description),
                         evidence=result.get("evidence", {}),
-                        remediation_action=RemediationAction.RESTRICT
-                        if rule.auto_remediate
-                        else RemediationAction.ALERT,
+                        remediation_action=(
+                            RemediationAction.RESTRICT if rule.auto_remediate else RemediationAction.ALERT
+                        ),
                     )
 
                     findings.append(finding)
