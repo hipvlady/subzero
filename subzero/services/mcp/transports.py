@@ -613,7 +613,7 @@ class HTTPLongPollingTransport(MCPTransport):
                             self.metrics.errors += 1
                             print(f"⚠️  Poll returned {response.status}")
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Expected timeout, continue polling
                     pass
 

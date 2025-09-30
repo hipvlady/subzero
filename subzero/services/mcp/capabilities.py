@@ -333,7 +333,7 @@ class DynamicCapabilityRegistry:
                     if result["success"]:
                         break
 
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print(f"⏱️  Step {step.step_id} timed out (attempt {attempt + 1}/{step.retry_count})")
 
                 except Exception as e:

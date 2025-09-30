@@ -501,7 +501,7 @@ class FunctionalEventOrchestrator:
                     "cache_hit": False,
                 }
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self.metrics.errors += 1
                 return {"success": False, "error": "Request timeout", "latency_ms": timeout * 1000}
 
