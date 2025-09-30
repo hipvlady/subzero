@@ -24,8 +24,7 @@ from numba import jit, types
 from numba.typed import Dict as NumbaDict, List as NumbaList
 import aiohttp
 import httpx
-from fga_client import ClientConfiguration, FgaClient
-from fga_client.models import CheckRequest, User, Object, Relation
+from openfga_sdk import ClientConfiguration, OpenFgaClient as FgaClient, CheckRequest
 import redis.asyncio as redis
 from prometheus_client import Counter, Histogram, Gauge
 

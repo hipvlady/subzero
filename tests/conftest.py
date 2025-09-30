@@ -32,6 +32,7 @@ from subzero.subzeroapp import UnifiedZeroTrustGateway
 # Event Loop Configuration
 # ========================================
 
+
 @pytest.fixture(scope="session")
 def event_loop():
     """
@@ -50,6 +51,7 @@ def event_loop():
 # ========================================
 # Configuration Fixtures
 # ========================================
+
 
 @pytest.fixture
 def auth0_config():
@@ -95,6 +97,7 @@ def test_config() -> Dict:
 # ========================================
 # Gateway Fixtures
 # ========================================
+
 
 @pytest.fixture
 async def gateway(auth0_config):
@@ -142,6 +145,7 @@ def mock_gateway():
 # ========================================
 # Authentication Fixtures
 # ========================================
+
 
 @pytest.fixture
 def valid_jwt_token() -> str:
@@ -193,6 +197,7 @@ def test_user_claims() -> Dict:
 # Authorization Fixtures
 # ========================================
 
+
 @pytest.fixture
 def test_permissions():
     """
@@ -220,6 +225,7 @@ def test_permissions():
 # ========================================
 # Security Fixtures
 # ========================================
+
 
 @pytest.fixture
 def test_threat_data():
@@ -255,6 +261,7 @@ def test_threat_data():
 # Performance Fixtures
 # ========================================
 
+
 @pytest.fixture
 def performance_config():
     """
@@ -276,6 +283,7 @@ def performance_config():
 # ========================================
 # Mock External Services
 # ========================================
+
 
 @pytest.fixture
 def mock_auth0_client():
@@ -331,6 +339,7 @@ def mock_redis_client():
 # Test Data Generators
 # ========================================
 
+
 @pytest.fixture
 def generate_test_users():
     """
@@ -341,6 +350,7 @@ def generate_test_users():
     callable
         Function that generates test users
     """
+
     def _generate(count: int = 10):
         return [
             {
@@ -364,6 +374,7 @@ def generate_test_tokens():
     callable
         Function that generates test tokens
     """
+
     def _generate(count: int = 10):
         return [f"token_{i}" for i in range(count)]
 
@@ -373,6 +384,7 @@ def generate_test_tokens():
 # ========================================
 # Cleanup Fixtures
 # ========================================
+
 
 @pytest.fixture(autouse=True)
 async def cleanup_after_test():
@@ -391,6 +403,7 @@ async def cleanup_after_test():
 # Markers
 # ========================================
 
+
 def pytest_configure(config):
     """Configure pytest markers."""
     config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
@@ -403,6 +416,7 @@ def pytest_configure(config):
 # ========================================
 # Logging Configuration
 # ========================================
+
 
 @pytest.fixture(scope="session", autouse=True)
 def configure_logging():
@@ -418,6 +432,7 @@ def configure_logging():
 # ========================================
 # Benchmark Fixtures
 # ========================================
+
 
 @pytest.fixture
 def benchmark_config(request):

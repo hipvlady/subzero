@@ -164,9 +164,7 @@ class SubzeroLogger:
     >>> logger.error("Authentication failed", user_id="user456", error="invalid_token")
     """
 
-    def __init__(
-        self, name: str, level: LogLevel = LogLevel.INFO, structured: bool = True
-    ):
+    def __init__(self, name: str, level: LogLevel = LogLevel.INFO, structured: bool = True):
         """Initialize Subzero logger."""
         self.logger = logging.getLogger(name)
         self.logger.setLevel(getattr(logging, level.value))
@@ -181,9 +179,7 @@ class SubzeroLogger:
         if structured:
             handler.setFormatter(StructuredFormatter())
         else:
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             handler.setFormatter(formatter)
 
         self.logger.addHandler(handler)
@@ -206,9 +202,7 @@ class SubzeroLogger:
             if key not in ["exc_info"]:
                 extra[key] = value
 
-        self.logger.log(
-            getattr(logging, level), message, extra=extra, exc_info=kwargs.get("exc_info")
-        )
+        self.logger.log(getattr(logging, level), message, extra=extra, exc_info=kwargs.get("exc_info"))
 
     def debug(self, message: str, **kwargs):
         """
@@ -327,9 +321,7 @@ def setup_logging(
     if structured:
         console_handler.setFormatter(StructuredFormatter())
     else:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         console_handler.setFormatter(formatter)
 
     root_logger.addHandler(console_handler)
@@ -341,9 +333,7 @@ def setup_logging(
         if structured:
             file_handler.setFormatter(StructuredFormatter())
         else:
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             file_handler.setFormatter(formatter)
 
         root_logger.addHandler(file_handler)

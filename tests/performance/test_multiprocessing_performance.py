@@ -16,7 +16,8 @@ import pytest
 # Import multiprocessing components to test
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src"))
 
 from auth.multiprocess_jwt import MultiProcessJWTProcessor
 from auth.parallel_hash import ParallelHashComputer
@@ -38,11 +39,11 @@ class MultiprocessingBenchmarks:
     def _get_system_info(self) -> Dict[str, Any]:
         """Get system information for context"""
         return {
-            'cpu_count': mp.cpu_count(),
-            'physical_cores': psutil.cpu_count(logical=False),
-            'total_memory_gb': psutil.virtual_memory().total / (1024**3),
-            'platform': sys.platform,
-            'python_version': sys.version
+            "cpu_count": mp.cpu_count(),
+            "physical_cores": psutil.cpu_count(logical=False),
+            "total_memory_gb": psutil.virtual_memory().total / (1024**3),
+            "platform": sys.platform,
+            "python_version": sys.version,
         }
 
     async def benchmark_jwt_processing(self) -> Dict[str, Any]:
@@ -62,12 +63,12 @@ class MultiprocessingBenchmarks:
             # Generate test payloads
             payloads = [
                 {
-                    'sub': f'user_{i}',
-                    'iss': 'ztag_benchmark',
-                    'aud': 'https://api.example.com',
-                    'exp': int(time.time()) + 3600,
-                    'iat': int(time.time()),
-                    'jti': f'token_{i}_{int(time.time())}'
+                    "sub": f"user_{i}",
+                    "iss": "ztag_benchmark",
+                    "aud": "https://api.example.com",
+                    "exp": int(time.time()) + 3600,
+                    "iat": int(time.time()),
+                    "jti": f"token_{i}_{int(time.time())}",
                 }
                 for i in range(size)
             ]
@@ -85,13 +86,13 @@ class MultiprocessingBenchmarks:
             speedup_threading = sequential_time / threading_time if threading_time > 0 else 0
 
             results[f"{size}_tokens"] = {
-                'sequential_time_ms': sequential_time * 1000,
-                'multiprocess_time_ms': multiprocess_time * 1000,
-                'threading_time_ms': threading_time * 1000,
-                'multiprocess_speedup': speedup_mp,
-                'threading_speedup': speedup_threading,
-                'multiprocess_throughput': size / multiprocess_time,
-                'sequential_throughput': size / sequential_time
+                "sequential_time_ms": sequential_time * 1000,
+                "multiprocess_time_ms": multiprocess_time * 1000,
+                "threading_time_ms": threading_time * 1000,
+                "multiprocess_speedup": speedup_mp,
+                "threading_speedup": speedup_threading,
+                "multiprocess_throughput": size / multiprocess_time,
+                "sequential_throughput": size / sequential_time,
             }
 
             print(f"    Sequential: {sequential_time*1000:.1f}ms ({size/sequential_time:.0f} tokens/s)")
@@ -138,10 +139,7 @@ class MultiprocessingBenchmarks:
 
         # Split into chunks for threading
         chunk_size = len(payloads) // mp.cpu_count()
-        chunks = [
-            payloads[i:i + chunk_size]
-            for i in range(0, len(payloads), chunk_size)
-        ]
+        chunks = [payloads[i : i + chunk_size] for i in range(0, len(payloads), chunk_size)]
 
         start_time = time.perf_counter()
 
@@ -165,7 +163,7 @@ class MultiprocessingBenchmarks:
             print(f"\n  Testing {size} hash operations:")
 
             # Generate test data
-            test_data = [f"user_data_{i}_benchmark_test".encode('utf-8') for i in range(size)]
+            test_data = [f"user_data_{i}_benchmark_test".encode("utf-8") for i in range(size)]
 
             # Sequential baseline
             sequential_time = await self._benchmark_sequential_hash(test_data)
@@ -176,11 +174,11 @@ class MultiprocessingBenchmarks:
             speedup = sequential_time / parallel_time if parallel_time > 0 else 0
 
             results[f"{size}_hashes"] = {
-                'sequential_time_ms': sequential_time * 1000,
-                'parallel_time_ms': parallel_time * 1000,
-                'speedup': speedup,
-                'parallel_throughput': size / parallel_time,
-                'sequential_throughput': size / sequential_time
+                "sequential_time_ms": sequential_time * 1000,
+                "parallel_time_ms": parallel_time * 1000,
+                "speedup": speedup,
+                "parallel_throughput": size / parallel_time,
+                "sequential_throughput": size / sequential_time,
             }
 
             print(f"    Sequential: {sequential_time*1000:.1f}ms ({size/sequential_time:.0f} hashes/s)")
@@ -244,11 +242,11 @@ class MultiprocessingBenchmarks:
             distributed_time = await self._benchmark_distributed_cache(test_data)
 
             results[f"{size}_operations"] = {
-                'local_time_ms': local_time * 1000,
-                'distributed_time_ms': distributed_time * 1000,
-                'local_throughput': size * 2 / local_time,  # *2 for set+get
-                'distributed_throughput': size * 2 / distributed_time,
-                'distributed_overhead': distributed_time / local_time if local_time > 0 else 0
+                "local_time_ms": local_time * 1000,
+                "distributed_time_ms": distributed_time * 1000,
+                "local_throughput": size * 2 / local_time,  # *2 for set+get
+                "distributed_throughput": size * 2 / distributed_time,
+                "distributed_overhead": distributed_time / local_time if local_time > 0 else 0,
             }
 
             print(f"    Local cache: {local_time*1000:.1f}ms ({size*2/local_time:.0f} ops/s)")
@@ -321,11 +319,11 @@ class MultiprocessingBenchmarks:
             speedup = traditional_time / multiprocess_time if multiprocess_time > 0 else 0
 
             results[f"{size}_authentications"] = {
-                'traditional_time_ms': traditional_time * 1000,
-                'multiprocess_time_ms': multiprocess_time * 1000,
-                'speedup': speedup,
-                'traditional_throughput': size / traditional_time,
-                'multiprocess_throughput': size / multiprocess_time
+                "traditional_time_ms": traditional_time * 1000,
+                "multiprocess_time_ms": multiprocess_time * 1000,
+                "speedup": speedup,
+                "traditional_throughput": size / traditional_time,
+                "multiprocess_throughput": size / multiprocess_time,
             }
 
             print(f"    Traditional: {traditional_time*1000:.1f}ms ({size/traditional_time:.0f} auths/s)")
@@ -337,9 +335,7 @@ class MultiprocessingBenchmarks:
     async def _benchmark_traditional_auth(self, user_ids: List[str]) -> float:
         """Benchmark traditional authentication"""
         auth = HighPerformanceAuthenticator(
-            auth0_domain="benchmark.auth0.com",
-            client_id="benchmark_client",
-            enable_multiprocessing=False
+            auth0_domain="benchmark.auth0.com", client_id="benchmark_client", enable_multiprocessing=False
         )
 
         try:
@@ -361,9 +357,7 @@ class MultiprocessingBenchmarks:
     async def _benchmark_multiprocess_auth(self, user_ids: List[str]) -> float:
         """Benchmark multiprocessing authentication"""
         auth = HighPerformanceAuthenticator(
-            auth0_domain="benchmark.auth0.com",
-            client_id="benchmark_client",
-            enable_multiprocessing=True
+            auth0_domain="benchmark.auth0.com", client_id="benchmark_client", enable_multiprocessing=True
         )
 
         try:
@@ -398,11 +392,11 @@ class MultiprocessingBenchmarks:
 
             large_payloads = [
                 {
-                    'sub': f'stress_user_{i}',
-                    'iss': 'stress_test',
-                    'aud': 'https://api.example.com',
-                    'exp': int(time.time()) + 3600,
-                    'complex_claim': f'complex_data_{i}' * 100  # Make payloads larger
+                    "sub": f"stress_user_{i}",
+                    "iss": "stress_test",
+                    "aud": "https://api.example.com",
+                    "exp": int(time.time()) + 3600,
+                    "complex_claim": f"complex_data_{i}" * 100,  # Make payloads larger
                 }
                 for i in range(5000)  # Large workload
             ]
@@ -424,15 +418,15 @@ class MultiprocessingBenchmarks:
             final_memory = psutil.virtual_memory().percent
 
             return {
-                'baseline_cpu_percent': baseline_cpu,
-                'peak_cpu_percent': final_cpu,
-                'baseline_memory_percent': baseline_memory,
-                'peak_memory_percent': final_memory,
-                'processing_time_ms': processing_time * 1000,
-                'throughput_tokens_per_second': len(large_payloads) / processing_time,
-                'system_metrics': metrics,
-                'cpu_increase': final_cpu - baseline_cpu,
-                'memory_increase': final_memory - baseline_memory
+                "baseline_cpu_percent": baseline_cpu,
+                "peak_cpu_percent": final_cpu,
+                "baseline_memory_percent": baseline_memory,
+                "peak_memory_percent": final_memory,
+                "processing_time_ms": processing_time * 1000,
+                "throughput_tokens_per_second": len(large_payloads) / processing_time,
+                "system_metrics": metrics,
+                "cpu_increase": final_cpu - baseline_cpu,
+                "memory_increase": final_memory - baseline_memory,
             }
 
         finally:
@@ -446,42 +440,48 @@ class MultiprocessingBenchmarks:
         report.append("MULTIPROCESSING PERFORMANCE BENCHMARK REPORT")
         report.append("=" * 80)
         report.append(f"System Information:")
-        report.append(f"  CPU Cores: {self.system_info['cpu_count']} logical, {self.system_info['physical_cores']} physical")
+        report.append(
+            f"  CPU Cores: {self.system_info['cpu_count']} logical, {self.system_info['physical_cores']} physical"
+        )
         report.append(f"  Memory: {self.system_info['total_memory_gb']:.1f} GB")
         report.append(f"  Platform: {self.system_info['platform']}")
         report.append("")
 
         # JWT Processing Results
-        if 'jwt_processing' in all_results:
+        if "jwt_processing" in all_results:
             report.append("JWT PROCESSING PERFORMANCE:")
             report.append("-" * 40)
-            jwt_results = all_results['jwt_processing']
+            jwt_results = all_results["jwt_processing"]
 
             for test_size, data in jwt_results.items():
                 report.append(f"  {test_size}:")
                 report.append(f"    Multiprocessing speedup: {data['multiprocess_speedup']:.1f}x")
-                report.append(f"    Throughput improvement: {data['multiprocess_throughput']/data['sequential_throughput']:.1f}x")
+                report.append(
+                    f"    Throughput improvement: {data['multiprocess_throughput']/data['sequential_throughput']:.1f}x"
+                )
                 report.append(f"    Sequential: {data['sequential_time_ms']:.0f}ms")
                 report.append(f"    Multiprocessing: {data['multiprocess_time_ms']:.0f}ms")
                 report.append("")
 
         # Hash Computation Results
-        if 'hash_computation' in all_results:
+        if "hash_computation" in all_results:
             report.append("HASH COMPUTATION PERFORMANCE:")
             report.append("-" * 40)
-            hash_results = all_results['hash_computation']
+            hash_results = all_results["hash_computation"]
 
             for test_size, data in hash_results.items():
                 report.append(f"  {test_size}:")
                 report.append(f"    Parallel speedup: {data['speedup']:.1f}x")
-                report.append(f"    Throughput improvement: {data['parallel_throughput']/data['sequential_throughput']:.1f}x")
+                report.append(
+                    f"    Throughput improvement: {data['parallel_throughput']/data['sequential_throughput']:.1f}x"
+                )
                 report.append("")
 
         # Cache Performance Results
-        if 'cache_operations' in all_results:
+        if "cache_operations" in all_results:
             report.append("CACHE PERFORMANCE:")
             report.append("-" * 40)
-            cache_results = all_results['cache_operations']
+            cache_results = all_results["cache_operations"]
 
             for test_size, data in cache_results.items():
                 report.append(f"  {test_size}:")
@@ -490,14 +490,14 @@ class MultiprocessingBenchmarks:
                 report.append("")
 
         # End-to-End Results
-        if 'end_to_end' in all_results:
+        if "end_to_end" in all_results:
             report.append("END-TO-END AUTHENTICATION PERFORMANCE:")
             report.append("-" * 40)
-            e2e_results = all_results['end_to_end']
+            e2e_results = all_results["end_to_end"]
 
             max_throughput = 0
             for test_size, data in e2e_results.items():
-                throughput = data['multiprocess_throughput']
+                throughput = data["multiprocess_throughput"]
                 max_throughput = max(max_throughput, throughput)
 
                 report.append(f"  {test_size}:")
@@ -511,10 +511,10 @@ class MultiprocessingBenchmarks:
             report.append("")
 
         # Resource Usage
-        if 'resource_usage' in all_results:
+        if "resource_usage" in all_results:
             report.append("SYSTEM RESOURCE USAGE:")
             report.append("-" * 40)
-            resource_data = all_results['resource_usage']
+            resource_data = all_results["resource_usage"]
 
             report.append(f"  CPU Usage Increase: {resource_data['cpu_increase']:.1f}%")
             report.append(f"  Memory Usage Increase: {resource_data['memory_increase']:.1f}%")
@@ -526,18 +526,18 @@ class MultiprocessingBenchmarks:
         report.append("-" * 40)
 
         # Calculate average speedups
-        if 'jwt_processing' in all_results:
-            jwt_speedups = [data['multiprocess_speedup'] for data in all_results['jwt_processing'].values()]
+        if "jwt_processing" in all_results:
+            jwt_speedups = [data["multiprocess_speedup"] for data in all_results["jwt_processing"].values()]
             avg_jwt_speedup = statistics.mean(jwt_speedups)
             report.append(f"  Average JWT Processing Speedup: {avg_jwt_speedup:.1f}x")
 
-        if 'hash_computation' in all_results:
-            hash_speedups = [data['speedup'] for data in all_results['hash_computation'].values()]
+        if "hash_computation" in all_results:
+            hash_speedups = [data["speedup"] for data in all_results["hash_computation"].values()]
             avg_hash_speedup = statistics.mean(hash_speedups)
             report.append(f"  Average Hash Computation Speedup: {avg_hash_speedup:.1f}x")
 
-        if 'end_to_end' in all_results:
-            e2e_speedups = [data['speedup'] for data in all_results['end_to_end'].values()]
+        if "end_to_end" in all_results:
+            e2e_speedups = [data["speedup"] for data in all_results["end_to_end"].values()]
             avg_e2e_speedup = statistics.mean(e2e_speedups)
             report.append(f"  Average End-to-End Speedup: {avg_e2e_speedup:.1f}x")
 
@@ -563,19 +563,19 @@ async def run_comprehensive_benchmarks():
 
     try:
         # JWT Processing Benchmarks
-        all_results['jwt_processing'] = await benchmarks.benchmark_jwt_processing()
+        all_results["jwt_processing"] = await benchmarks.benchmark_jwt_processing()
 
         # Hash Computation Benchmarks
-        all_results['hash_computation'] = await benchmarks.benchmark_hash_computation()
+        all_results["hash_computation"] = await benchmarks.benchmark_hash_computation()
 
         # Cache Performance Benchmarks
-        all_results['cache_operations'] = await benchmarks.benchmark_cache_operations()
+        all_results["cache_operations"] = await benchmarks.benchmark_cache_operations()
 
         # End-to-End Authentication Benchmarks
-        all_results['end_to_end'] = await benchmarks.benchmark_end_to_end_authentication()
+        all_results["end_to_end"] = await benchmarks.benchmark_end_to_end_authentication()
 
         # System Resource Usage Benchmarks
-        all_results['resource_usage'] = await benchmarks.benchmark_system_resource_usage()
+        all_results["resource_usage"] = await benchmarks.benchmark_system_resource_usage()
 
         # Generate comprehensive report
         report = benchmarks.generate_performance_report(all_results)
@@ -583,7 +583,8 @@ async def run_comprehensive_benchmarks():
 
         # Save results to file
         import json
-        with open('multiprocessing_benchmark_results.json', 'w') as f:
+
+        with open("multiprocessing_benchmark_results.json", "w") as f:
             json.dump(all_results, f, indent=2)
 
         print(f"\n📊 Detailed results saved to: multiprocessing_benchmark_results.json")

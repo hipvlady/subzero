@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import Optional, List
 
+
 class Settings(BaseSettings):
     # Auth0 Configuration
     AUTH0_DOMAIN: str
@@ -20,9 +21,7 @@ class Settings(BaseSettings):
     TOKEN_VAULT_API_URL: str = "https://api.auth0.com/token-vault/v1"
     TOKEN_VAULT_NAMESPACE: str = "ztag"
     TOKEN_VAULT_ENCRYPTION_KEY: Optional[str] = None
-    TOKEN_VAULT_SUPPORTED_PROVIDERS: List[str] = [
-        "google", "microsoft", "slack", "github", "box", "salesforce"
-    ]
+    TOKEN_VAULT_SUPPORTED_PROVIDERS: List[str] = ["google", "microsoft", "slack", "github", "box", "salesforce"]
 
     # Okta Configuration (for XAA support)
     OKTA_DOMAIN: Optional[str] = None
@@ -104,5 +103,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+
 
 settings = Settings()

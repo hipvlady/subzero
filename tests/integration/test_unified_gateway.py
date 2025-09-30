@@ -26,7 +26,7 @@ async def gateway():
         management_api_token="test_mgmt_token",
         fga_store_id="test_store",
         fga_client_id="test_fga_client",
-        fga_client_secret="test_fga_secret"
+        fga_client_secret="test_fga_secret",
     )
 
     gateway = UnifiedZeroTrustGateway(config=config)
@@ -62,7 +62,7 @@ class TestOrchestratorIntegration:
             "xaa_delegate",
             "xaa_establish_channel",
             "check_threat",
-            "assess_risk"
+            "assess_risk",
         ]
 
         for op in required_operations:
@@ -81,31 +81,30 @@ class TestAuthenticationIntegration:
     """Test authentication flow through orchestrator"""
 
     @pytest.mark.asyncio
-    @patch('src.auth.resilient_auth_service.ResilientAuthService.authenticate')
+    @patch("src.auth.resilient_auth_service.ResilientAuthService.authenticate")
     async def test_authentication_via_orchestrator(self, mock_auth, gateway):
         """Test authentication request goes through orchestrator"""
         # Mock authentication response
         from src.auth.resilient_auth_service import AuthenticationResult
+
         mock_auth.return_value = AuthenticationResult(
             success=True,
             user_id="test_user_123",
-            claims={'sub': 'test_user_123', 'email': 'test@example.com'},
+            claims={"sub": "test_user_123", "email": "test@example.com"},
             source="auth0",
             degradation_mode="normal",
-            latency_ms=8.5
+            latency_ms=8.5,
         )
 
         # Authenticate via gateway
         result = await gateway.authenticate_request(
-            user_id="test_user_123",
-            scopes="openid profile email",
-            priority=RequestPriority.HIGH
+            user_id="test_user_123", scopes="openid profile email", priority=RequestPriority.HIGH
         )
 
         # Verify orchestrator was used
-        assert result['success'] is True
-        assert result['user_id'] == "test_user_123"
-        assert 'latency_ms' in result
+        assert result["success"] is True
+        assert result["user_id"] == "test_user_123"
+        assert "latency_ms" in result
 
         # Verify metrics updated
         assert gateway.metrics.total_requests > 0
@@ -119,12 +118,9 @@ class TestAuthenticationIntegration:
 
         # First requests should succeed
         for i in range(5):
-            result = await gateway.authenticate_request(
-                user_id=user_id,
-                priority=RequestPriority.HIGH
-            )
+            result = await gateway.authenticate_request(user_id=user_id, priority=RequestPriority.HIGH)
             # May fail due to missing Auth0, but shouldn't be rate limited
-            if not result['success'] and 'rate_limit_exceeded' in result.get('error', ''):
+            if not result["success"] and "rate_limit_exceeded" in result.get("error", ""):
                 pytest.fail("Rate limit exceeded too early")
 
         # After many requests, should eventually hit rate limit
@@ -135,7 +131,7 @@ class TestAuthorizationIntegration:
     """Test authorization flow through orchestrator"""
 
     @pytest.mark.asyncio
-    @patch('src.fga.rebac_engine.ReBAC Engine.check')
+    @patch("src.fga.rebac_engine.ReBAC Engine.check")
     async def test_authorization_via_orchestrator(self, mock_rebac, gateway):
         """Test authorization check goes through orchestrator"""
         # Mock ReBAC response
@@ -147,13 +143,13 @@ class TestAuthorizationIntegration:
             resource_type="document",
             resource_id="doc_456",
             relation="viewer",
-            priority=RequestPriority.HIGH
+            priority=RequestPriority.HIGH,
         )
 
         # Verify result
-        assert result['allowed'] is True
-        assert result['source'] == "rebac"
-        assert 'latency_ms' in result
+        assert result["allowed"] is True
+        assert result["source"] == "rebac"
+        assert "latency_ms" in result
 
         # Verify audit log created
         assert gateway.audit_service.storage.total_events > 0
@@ -163,7 +159,7 @@ class TestThreatDetectionIntegration:
     """Test threat detection through orchestrator"""
 
     @pytest.mark.asyncio
-    @patch('src.security.advanced_threat_detection.SignupFraudDetector.detect')
+    @patch("src.security.advanced_threat_detection.SignupFraudDetector.detect")
     async def test_signup_fraud_detection(self, mock_detector, gateway):
         """Test signup fraud detection via orchestrator"""
         from src.security.advanced_threat_detection import ThreatSignal, ThreatSignalType
@@ -174,24 +170,21 @@ class TestThreatDetectionIntegration:
                 signal_type=ThreatSignalType.DISPOSABLE_EMAIL,
                 confidence=0.92,
                 message="Disposable email domain detected",
-                metadata={'domain': 'tempmail.com'}
+                metadata={"domain": "tempmail.com"},
             )
         ]
 
         # Detect threat via gateway
         result = await gateway.detect_threat(
             threat_type="signup_fraud",
-            data={
-                'email': 'test@tempmail.com',
-                'ip_address': '1.2.3.4'
-            },
-            priority=RequestPriority.CRITICAL
+            data={"email": "test@tempmail.com", "ip_address": "1.2.3.4"},
+            priority=RequestPriority.CRITICAL,
         )
 
         # Verify detection
-        assert result['threat_detected'] is True
-        assert result['confidence'] > 0.9
-        assert len(result['signals']) > 0
+        assert result["threat_detected"] is True
+        assert result["confidence"] > 0.9
+        assert len(result["signals"]) > 0
 
         # Verify metrics updated
         assert gateway.metrics.threats_blocked > 0
@@ -201,7 +194,7 @@ class TestTokenVaultIntegration:
     """Test Token Vault integration through orchestrator"""
 
     @pytest.mark.asyncio
-    @patch('src.auth.token_vault_integration.Auth0TokenVault.store_token')
+    @patch("src.auth.token_vault_integration.Auth0TokenVault.store_token")
     async def test_token_storage_via_orchestrator(self, mock_store, gateway):
         """Test token storage goes through orchestrator"""
         # Mock vault reference
@@ -211,66 +204,55 @@ class TestTokenVaultIntegration:
         result = await gateway.store_ai_credentials(
             agent_id="agent_123",
             provider=TokenProvider.GOOGLE,
-            token_data={
-                'access_token': 'ya29.xxx',
-                'refresh_token': 'refresh_xxx',
-                'expires_in': 3600
-            },
-            priority=RequestPriority.NORMAL
+            token_data={"access_token": "ya29.xxx", "refresh_token": "refresh_xxx", "expires_in": 3600},
+            priority=RequestPriority.NORMAL,
         )
 
         # Verify result
-        assert result['success'] is True
-        assert result['vault_ref'] == "vault_ref_abc123"
-        assert result['agent_id'] == "agent_123"
+        assert result["success"] is True
+        assert result["vault_ref"] == "vault_ref_abc123"
+        assert result["agent_id"] == "agent_123"
 
 
 class TestXAAIntegration:
     """Test XAA protocol integration through orchestrator"""
 
     @pytest.mark.asyncio
-    @patch('src.auth.xaa_protocol.XAAProtocol.establish_bidirectional_channel')
+    @patch("src.auth.xaa_protocol.XAAProtocol.establish_bidirectional_channel")
     async def test_xaa_channel_establishment(self, mock_channel, gateway):
         """Test XAA channel establishment via orchestrator"""
         # Mock channel result
         mock_channel.return_value = {
-            'success': True,
-            'channel_id': 'channel_123',
-            'agent_to_app_token': 'token_1',
-            'app_to_agent_token': 'token_2',
-            'expires_in': 3600
+            "success": True,
+            "channel_id": "channel_123",
+            "agent_to_app_token": "token_1",
+            "app_to_agent_token": "token_2",
+            "expires_in": 3600,
         }
 
         # Establish channel via gateway
         result = await gateway.establish_xaa_channel(
-            agent_id="agent_123",
-            app_id="app_456",
-            scopes=["xaa:read", "xaa:write"],
-            priority=RequestPriority.NORMAL
+            agent_id="agent_123", app_id="app_456", scopes=["xaa:read", "xaa:write"], priority=RequestPriority.NORMAL
         )
 
         # Verify result
-        assert result['success'] is True
-        assert result['channel_id'] == 'channel_123'
-        assert 'agent_to_app_token' in result
+        assert result["success"] is True
+        assert result["channel_id"] == "channel_123"
+        assert "agent_to_app_token" in result
 
 
 class TestPerformanceIntegration:
     """Test performance characteristics of integrated system"""
 
     @pytest.mark.asyncio
-    @patch('src.auth.resilient_auth_service.ResilientAuthService.authenticate')
+    @patch("src.auth.resilient_auth_service.ResilientAuthService.authenticate")
     async def test_concurrent_requests_handling(self, mock_auth, gateway):
         """Test gateway handles concurrent requests efficiently"""
         from src.auth.resilient_auth_service import AuthenticationResult
 
         # Mock fast responses
         mock_auth.return_value = AuthenticationResult(
-            success=True,
-            user_id="test_user",
-            source="cached",
-            degradation_mode="normal",
-            latency_ms=5.0
+            success=True, user_id="test_user", source="cached", degradation_mode="normal", latency_ms=5.0
         )
 
         # Submit many concurrent requests
@@ -280,10 +262,7 @@ class TestPerformanceIntegration:
         start_time = time.perf_counter()
 
         for i in range(num_requests):
-            task = gateway.authenticate_request(
-                user_id=f"user_{i}",
-                priority=RequestPriority.NORMAL
-            )
+            task = gateway.authenticate_request(user_id=f"user_{i}", priority=RequestPriority.NORMAL)
             tasks.append(task)
 
         # Wait for all requests
@@ -311,10 +290,7 @@ class TestPerformanceIntegration:
 
         tasks = []
         for _ in range(10):
-            task = gateway.authenticate_request(
-                user_id=user_id,
-                priority=RequestPriority.NORMAL
-            )
+            task = gateway.authenticate_request(user_id=user_id, priority=RequestPriority.NORMAL)
             tasks.append(task)
 
         # Execute concurrently
@@ -339,25 +315,22 @@ class TestMetricsAndMonitoring:
     async def test_gateway_metrics_collection(self, gateway):
         """Test metrics are collected from all components"""
         # Generate some activity
-        await gateway.authenticate_request(
-            user_id="metrics_test_user",
-            priority=RequestPriority.NORMAL
-        )
+        await gateway.authenticate_request(user_id="metrics_test_user", priority=RequestPriority.NORMAL)
 
         # Get metrics
         metrics = await gateway.get_gateway_metrics()
 
         # Verify structure
-        assert 'gateway' in metrics
-        assert 'orchestrator' in metrics
-        assert 'authentication' in metrics
-        assert 'authorization' in metrics
-        assert 'rate_limiting' in metrics
+        assert "gateway" in metrics
+        assert "orchestrator" in metrics
+        assert "authentication" in metrics
+        assert "authorization" in metrics
+        assert "rate_limiting" in metrics
 
         # Verify orchestrator metrics
-        assert 'total_requests' in metrics['orchestrator']
-        assert 'avg_latency_ms' in metrics['orchestrator']
-        assert 'throughput_rps' in metrics['orchestrator']
+        assert "total_requests" in metrics["orchestrator"]
+        assert "avg_latency_ms" in metrics["orchestrator"]
+        assert "throughput_rps" in metrics["orchestrator"]
 
         print(f"\n📊 Gateway Metrics:")
         print(f"   Total Requests: {metrics['gateway']['total_requests']}")
@@ -369,17 +342,14 @@ class TestResilienceIntegration:
     """Test resilience features integration"""
 
     @pytest.mark.asyncio
-    @patch('src.security.health_monitor.Auth0HealthMonitor.should_use_fallback')
+    @patch("src.security.health_monitor.Auth0HealthMonitor.should_use_fallback")
     async def test_graceful_degradation_integration(self, mock_fallback, gateway):
         """Test graceful degradation activates through gateway"""
         # Simulate service degradation
         mock_fallback.return_value = True
 
         # Request should still succeed using cache
-        result = await gateway.authenticate_request(
-            user_id="degradation_test_user",
-            priority=RequestPriority.HIGH
-        )
+        result = await gateway.authenticate_request(user_id="degradation_test_user", priority=RequestPriority.HIGH)
 
         # Should work even in degraded mode
         # (may fail if no cached data, but shouldn't crash)
@@ -389,23 +359,20 @@ class TestResilienceIntegration:
     async def test_audit_trail_integration(self, gateway):
         """Test audit trail captures all operations"""
         # Perform various operations
-        await gateway.authenticate_request(
-            user_id="audit_user_1",
-            priority=RequestPriority.NORMAL
-        )
+        await gateway.authenticate_request(user_id="audit_user_1", priority=RequestPriority.NORMAL)
 
         await gateway.authorize_request(
             user_id="audit_user_1",
             resource_type="document",
             resource_id="doc_123",
             relation="viewer",
-            priority=RequestPriority.NORMAL
+            priority=RequestPriority.NORMAL,
         )
 
         await gateway.detect_threat(
             threat_type="signup_fraud",
-            data={'email': 'test@example.com', 'ip_address': '1.2.3.4'},
-            priority=RequestPriority.CRITICAL
+            data={"email": "test@example.com", "ip_address": "1.2.3.4"},
+            priority=RequestPriority.CRITICAL,
         )
 
         # Verify audit events created
@@ -433,29 +400,19 @@ async def test_full_request_lifecycle():
         print("   2. Threat detection...")
         threat_result = await gateway.detect_threat(
             threat_type="signup_fraud",
-            data={
-                'email': 'test@example.com',
-                'ip_address': '1.2.3.4',
-                'user_agent': 'Mozilla/5.0'
-            }
+            data={"email": "test@example.com", "ip_address": "1.2.3.4", "user_agent": "Mozilla/5.0"},
         )
         print(f"      Threat detected: {threat_result['threat_detected']}")
 
         # 3. Authentication
         print("   3. Authentication...")
-        auth_result = await gateway.authenticate_request(
-            user_id="lifecycle_test_user",
-            source_ip="1.2.3.4"
-        )
+        auth_result = await gateway.authenticate_request(user_id="lifecycle_test_user", source_ip="1.2.3.4")
         print(f"      Authenticated: {auth_result['success']}")
 
         # 4. Authorization
         print("   4. Authorization...")
         authz_result = await gateway.authorize_request(
-            user_id="lifecycle_test_user",
-            resource_type="api",
-            resource_id="/protected",
-            relation="access"
+            user_id="lifecycle_test_user", resource_type="api", resource_id="/protected", relation="access"
         )
         print(f"      Authorized: {authz_result['allowed']}")
 

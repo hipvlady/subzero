@@ -37,7 +37,8 @@ import multiprocessing as mp
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.performance.cpu_bound_multiprocessing import (
     CPUBoundProcessor,
@@ -45,10 +46,11 @@ from src.performance.cpu_bound_multiprocessing import (
     _generate_coalescing_key_sync,
     _calculate_analytics_sync,
     _match_patterns_sync,
-    _cleanup_cache_sync
+    _cleanup_cache_sync,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class CPUBoundBenchmark:
     """Comprehensive CPU-bound performance benchmark suite"""
@@ -63,36 +65,29 @@ class CPUBoundBenchmark:
         # Generate unique contexts
         unique_count = int(count * (1 - duplicate_ratio))
         users = [f"user_{i}" for i in range(max(10, unique_count // 3))]
-        scopes_options = ['openid profile', 'openid profile email', 'admin', 'read-only']
+        scopes_options = ["openid profile", "openid profile email", "admin", "read-only"]
 
         for i in range(unique_count):
-            operation_type = random.choice(['authenticate', 'authorize', 'other'])
+            operation_type = random.choice(["authenticate", "authorize", "other"])
             user_id = random.choice(users)
 
-            if operation_type == 'authenticate':
+            if operation_type == "authenticate":
+                payload = {"user_id": user_id, "scopes": random.choice(scopes_options)}
+            elif operation_type == "authorize":
                 payload = {
-                    'user_id': user_id,
-                    'scopes': random.choice(scopes_options)
-                }
-            elif operation_type == 'authorize':
-                payload = {
-                    'user_id': user_id,
-                    'resource_type': random.choice(['document', 'api', 'database']),
-                    'resource_id': f'resource_{i}',
-                    'permission': random.choice(['read', 'write', 'admin'])
+                    "user_id": user_id,
+                    "resource_type": random.choice(["document", "api", "database"]),
+                    "resource_id": f"resource_{i}",
+                    "permission": random.choice(["read", "write", "admin"]),
                 }
             else:
                 payload = {
-                    'user_id': user_id,
-                    'data': f'complex_data_{i}_{random.randint(1000, 9999)}',
-                    'metadata': {'timestamp': time.time(), 'version': random.randint(1, 5)}
+                    "user_id": user_id,
+                    "data": f"complex_data_{i}_{random.randint(1000, 9999)}",
+                    "metadata": {"timestamp": time.time(), "version": random.randint(1, 5)},
                 }
 
-            contexts.append({
-                'operation_type': operation_type,
-                'user_id': user_id,
-                'payload': payload
-            })
+            contexts.append({"operation_type": operation_type, "user_id": user_id, "payload": payload})
 
         # Add duplicates
         duplicate_count = count - unique_count
@@ -109,14 +104,14 @@ class CPUBoundBenchmark:
 
         for i in range(count):
             metric = {
-                'timestamp': current_time - (count - i),
-                'total_requests': random.randint(1000, 50000),
-                'latency_ms': random.uniform(1.0, 100.0),
-                'throughput_rps': random.uniform(100, 10000),
-                'coalesced_requests': random.randint(100, 2000),
-                'cache_hits': random.randint(50, 1500),
-                'errors': random.randint(0, 100),
-                'error_rate': random.uniform(0.0, 0.1)
+                "timestamp": current_time - (count - i),
+                "total_requests": random.randint(1000, 50000),
+                "latency_ms": random.uniform(1.0, 100.0),
+                "throughput_rps": random.uniform(100, 10000),
+                "coalesced_requests": random.randint(100, 2000),
+                "cache_hits": random.randint(50, 1500),
+                "errors": random.randint(0, 100),
+                "error_rate": random.uniform(0.0, 0.1),
             }
             metrics.append(metric)
 
@@ -126,16 +121,16 @@ class CPUBoundBenchmark:
         """Generate test texts and patterns for pattern matching benchmarks"""
         # Common suspicious patterns for security analysis
         patterns = [
-            r'(?i)(union|select|insert|drop|delete|update)\s',
-            r'(?i)<script[^>]*>.*?</script>',
-            r'(?i)javascript:\s*[a-z]',
-            r'(?i)(alert|prompt|confirm)\s*\(',
-            r'(?i)eval\s*\(',
-            r'(?i)(admin|root|administrator)',
-            r'\b\d{4}-\d{4}-\d{4}-\d{4}\b',  # Credit card pattern
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email pattern
-            r'(?i)(password|passwd|pwd)\s*[:=]\s*\S+',
-            r'(?i)(token|key|secret)\s*[:=]\s*[a-z0-9]{20,}'
+            r"(?i)(union|select|insert|drop|delete|update)\s",
+            r"(?i)<script[^>]*>.*?</script>",
+            r"(?i)javascript:\s*[a-z]",
+            r"(?i)(alert|prompt|confirm)\s*\(",
+            r"(?i)eval\s*\(",
+            r"(?i)(admin|root|administrator)",
+            r"\b\d{4}-\d{4}-\d{4}-\d{4}\b",  # Credit card pattern
+            r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Email pattern
+            r"(?i)(password|passwd|pwd)\s*[:=]\s*\S+",
+            r"(?i)(token|key|secret)\s*[:=]\s*[a-z0-9]{20,}",
         ][:pattern_count]
 
         # Generate test texts with varying complexity
@@ -149,7 +144,7 @@ class CPUBoundBenchmark:
             "Credit card: 1234-5678-9012-3456",
             "Contact: user@example.com for support",
             "eval(malicious_code)",
-            "Administrator access granted"
+            "Administrator access granted",
         ]
 
         normal_phrases = [
@@ -160,7 +155,7 @@ class CPUBoundBenchmark:
             "Thank you for your service",
             "The system is working correctly",
             "Performance metrics look good",
-            "Database connection established"
+            "Database connection established",
         ]
 
         for i in range(text_count):
@@ -194,17 +189,18 @@ class CPUBoundBenchmark:
                 ttl = random.randint(300, 3600)  # 5 minutes to 1 hour TTL
 
             cache_entries[f"cache_key_{i}"] = {
-                'value': f"cached_data_{i}_{random.randint(1000, 9999)}",
-                'timestamp': timestamp,
-                'ttl': ttl,
-                'access_count': random.randint(1, 100),
-                'metadata': {
-                    'user_id': f"user_{random.randint(1, 1000)}",
-                    'operation': random.choice(['auth', 'data', 'config'])
-                }
+                "value": f"cached_data_{i}_{random.randint(1000, 9999)}",
+                "timestamp": timestamp,
+                "ttl": ttl,
+                "access_count": random.randint(1, 100),
+                "metadata": {
+                    "user_id": f"user_{random.randint(1, 1000)}",
+                    "operation": random.choice(["auth", "data", "config"]),
+                },
             }
 
         return cache_entries
+
 
 @pytest.mark.asyncio
 async def test_coalescing_key_generation_benchmark():
@@ -238,19 +234,21 @@ async def test_coalescing_key_generation_benchmark():
         speedup = sequential_time / multiprocessing_time if multiprocessing_time > 0 else 1.0
 
         results[batch_size] = {
-            'sequential_time': sequential_time,
-            'multiprocessing_time': multiprocessing_time,
-            'speedup': speedup,
-            'batch_size': batch_size
+            "sequential_time": sequential_time,
+            "multiprocessing_time": multiprocessing_time,
+            "speedup": speedup,
+            "batch_size": batch_size,
         }
 
-        logger.info(f"Batch {batch_size}: Sequential={sequential_time*1000:.1f}ms, "
-                   f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
-                   f"Speedup={speedup:.1f}x")
+        logger.info(
+            f"Batch {batch_size}: Sequential={sequential_time*1000:.1f}ms, "
+            f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
+            f"Speedup={speedup:.1f}x"
+        )
 
     # Verify performance targets
     large_batch_results = [r for size, r in results.items() if size >= 100]
-    avg_speedup = statistics.mean([r['speedup'] for r in large_batch_results])
+    avg_speedup = statistics.mean([r["speedup"] for r in large_batch_results])
 
     print(f"\n📊 Coalescing Key Generation Results:")
     print(f"  Average speedup (batches ≥100): {avg_speedup:.1f}x")
@@ -259,6 +257,7 @@ async def test_coalescing_key_generation_benchmark():
 
     # Assert performance targets
     assert avg_speedup >= 1.4, f"Expected ≥1.4x speedup, got {avg_speedup:.1f}x"
+
 
 @pytest.mark.asyncio
 async def test_analytics_processing_benchmark():
@@ -288,27 +287,29 @@ async def test_analytics_processing_benchmark():
         # Validate results structure
         assert isinstance(sequential_results, dict)
         assert isinstance(multiprocessing_results, dict)
-        assert 'throughput' in multiprocessing_results
-        assert 'latency' in multiprocessing_results
-        assert 'efficiency' in multiprocessing_results
+        assert "throughput" in multiprocessing_results
+        assert "latency" in multiprocessing_results
+        assert "efficiency" in multiprocessing_results
 
         # Calculate speedup
         speedup = sequential_time / multiprocessing_time if multiprocessing_time > 0 else 1.0
 
         results[dataset_size] = {
-            'sequential_time': sequential_time,
-            'multiprocessing_time': multiprocessing_time,
-            'speedup': speedup,
-            'dataset_size': dataset_size
+            "sequential_time": sequential_time,
+            "multiprocessing_time": multiprocessing_time,
+            "speedup": speedup,
+            "dataset_size": dataset_size,
         }
 
-        logger.info(f"Dataset {dataset_size}: Sequential={sequential_time*1000:.1f}ms, "
-                   f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
-                   f"Speedup={speedup:.1f}x")
+        logger.info(
+            f"Dataset {dataset_size}: Sequential={sequential_time*1000:.1f}ms, "
+            f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
+            f"Speedup={speedup:.1f}x"
+        )
 
     # Verify performance targets
     large_dataset_results = [r for size, r in results.items() if size >= 200]
-    avg_speedup = statistics.mean([r['speedup'] for r in large_dataset_results])
+    avg_speedup = statistics.mean([r["speedup"] for r in large_dataset_results])
 
     print(f"\n📊 Analytics Processing Results:")
     print(f"  Average speedup (datasets ≥200): {avg_speedup:.1f}x")
@@ -317,6 +318,7 @@ async def test_analytics_processing_benchmark():
 
     # Assert performance targets
     assert avg_speedup >= 2.5, f"Expected ≥2.5x speedup, got {avg_speedup:.1f}x"
+
 
 @pytest.mark.asyncio
 async def test_pattern_matching_benchmark():
@@ -349,27 +351,29 @@ async def test_pattern_matching_benchmark():
 
         # Check result structure consistency
         for seq_result, mp_result in zip(sequential_results[:5], multiprocessing_results[:5]):
-            assert seq_result['text_length'] == mp_result['text_length']
-            assert seq_result['patterns_tested'] == mp_result['patterns_tested']
+            assert seq_result["text_length"] == mp_result["text_length"]
+            assert seq_result["patterns_tested"] == mp_result["patterns_tested"]
 
         # Calculate speedup
         speedup = sequential_time / multiprocessing_time if multiprocessing_time > 0 else 1.0
 
         results[text_count] = {
-            'sequential_time': sequential_time,
-            'multiprocessing_time': multiprocessing_time,
-            'speedup': speedup,
-            'text_count': text_count,
-            'operations': text_count * pattern_count
+            "sequential_time": sequential_time,
+            "multiprocessing_time": multiprocessing_time,
+            "speedup": speedup,
+            "text_count": text_count,
+            "operations": text_count * pattern_count,
         }
 
-        logger.info(f"Texts {text_count}: Sequential={sequential_time*1000:.1f}ms, "
-                   f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
-                   f"Speedup={speedup:.1f}x")
+        logger.info(
+            f"Texts {text_count}: Sequential={sequential_time*1000:.1f}ms, "
+            f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
+            f"Speedup={speedup:.1f}x"
+        )
 
     # Verify performance targets
     large_workload_results = [r for count, r in results.items() if count >= 100]
-    avg_speedup = statistics.mean([r['speedup'] for r in large_workload_results])
+    avg_speedup = statistics.mean([r["speedup"] for r in large_workload_results])
 
     print(f"\n📊 Pattern Matching Results:")
     print(f"  Average speedup (≥100 texts): {avg_speedup:.1f}x")
@@ -378,6 +382,7 @@ async def test_pattern_matching_benchmark():
 
     # Assert performance targets
     assert avg_speedup >= 3.0, f"Expected ≥3.0x speedup, got {avg_speedup:.1f}x"
+
 
 @pytest.mark.asyncio
 async def test_cache_cleanup_benchmark():
@@ -412,20 +417,22 @@ async def test_cache_cleanup_benchmark():
         speedup = sequential_time / multiprocessing_time if multiprocessing_time > 0 else 1.0
 
         results[cache_size] = {
-            'sequential_time': sequential_time,
-            'multiprocessing_time': multiprocessing_time,
-            'speedup': speedup,
-            'cache_size': cache_size,
-            'expired_count': len(sequential_expired)
+            "sequential_time": sequential_time,
+            "multiprocessing_time": multiprocessing_time,
+            "speedup": speedup,
+            "cache_size": cache_size,
+            "expired_count": len(sequential_expired),
         }
 
-        logger.info(f"Cache {cache_size}: Sequential={sequential_time*1000:.1f}ms, "
-                   f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
-                   f"Speedup={speedup:.1f}x, Expired={len(sequential_expired)}")
+        logger.info(
+            f"Cache {cache_size}: Sequential={sequential_time*1000:.1f}ms, "
+            f"Multiprocessing={multiprocessing_time*1000:.1f}ms, "
+            f"Speedup={speedup:.1f}x, Expired={len(sequential_expired)}"
+        )
 
     # Verify performance targets
     large_cache_results = [r for size, r in results.items() if size >= 1000]
-    avg_speedup = statistics.mean([r['speedup'] for r in large_cache_results])
+    avg_speedup = statistics.mean([r["speedup"] for r in large_cache_results])
 
     print(f"\n📊 Cache Cleanup Results:")
     print(f"  Average speedup (≥1000 entries): {avg_speedup:.1f}x")
@@ -434,6 +441,7 @@ async def test_cache_cleanup_benchmark():
 
     # Assert performance targets
     assert avg_speedup >= 2.0, f"Expected ≥2.0x speedup, got {avg_speedup:.1f}x"
+
 
 @pytest.mark.asyncio
 async def test_gil_contention_demonstration():
@@ -458,10 +466,7 @@ async def test_gil_contention_demonstration():
     # Threading (GIL-bound)
     start_time = time.perf_counter()
     with threading.ThreadPoolExecutor(max_workers=num_tasks) as executor:
-        future_to_task = {
-            executor.submit(cpu_bound_task, cpu_iterations): i
-            for i in range(num_tasks)
-        }
+        future_to_task = {executor.submit(cpu_bound_task, cpu_iterations): i for i in range(num_tasks)}
         threading_results = []
         for future in as_completed(future_to_task):
             threading_results.append(future.result())
@@ -473,11 +478,9 @@ async def test_gil_contention_demonstration():
     try:
         # Simulate multiprocessing by running tasks through process pool
         from concurrent.futures import ProcessPoolExecutor
+
         with ProcessPoolExecutor(max_workers=num_tasks) as executor:
-            future_to_task = {
-                executor.submit(cpu_bound_task, cpu_iterations): i
-                for i in range(num_tasks)
-            }
+            future_to_task = {executor.submit(cpu_bound_task, cpu_iterations): i for i in range(num_tasks)}
             multiprocessing_results = []
             for future in as_completed(future_to_task):
                 multiprocessing_results.append(future.result())
@@ -507,6 +510,7 @@ async def test_gil_contention_demonstration():
     assert cpu_speedup >= 2.0, f"Multiprocessing should show significant speedup for CPU-bound tasks"
     assert asyncio_time < 0.5, f"AsyncIO should be efficient for I/O-bound tasks"
 
+
 @pytest.mark.asyncio
 async def test_comprehensive_performance_comparison():
     """Comprehensive comparison of all CPU-bound optimizations"""
@@ -514,10 +518,10 @@ async def test_comprehensive_performance_comparison():
 
     # Test scenarios with varying complexity
     scenarios = [
-        {'name': 'Small Workload', 'contexts': 50, 'metrics': 50, 'texts': 25, 'cache': 100},
-        {'name': 'Medium Workload', 'contexts': 200, 'metrics': 200, 'texts': 100, 'cache': 500},
-        {'name': 'Large Workload', 'contexts': 500, 'metrics': 500, 'texts': 200, 'cache': 1000},
-        {'name': 'Enterprise Workload', 'contexts': 1000, 'metrics': 1000, 'texts': 500, 'cache': 2000}
+        {"name": "Small Workload", "contexts": 50, "metrics": 50, "texts": 25, "cache": 100},
+        {"name": "Medium Workload", "contexts": 200, "metrics": 200, "texts": 100, "cache": 500},
+        {"name": "Large Workload", "contexts": 500, "metrics": 500, "texts": 200, "cache": 1000},
+        {"name": "Enterprise Workload", "contexts": 1000, "metrics": 1000, "texts": 500, "cache": 2000},
     ]
 
     results_summary = []
@@ -526,12 +530,12 @@ async def test_comprehensive_performance_comparison():
         logger.info(f"Testing scenario: {scenario['name']}")
 
         scenario_results = {
-            'scenario': scenario['name'],
-            'workload_size': sum(scenario.values()) if isinstance(scenario, dict) else 0
+            "scenario": scenario["name"],
+            "workload_size": sum(scenario.values()) if isinstance(scenario, dict) else 0,
         }
 
         # Test coalescing performance
-        contexts = benchmark.generate_test_contexts(scenario['contexts'], duplicate_ratio=0.3)
+        contexts = benchmark.generate_test_contexts(scenario["contexts"], duplicate_ratio=0.3)
 
         start_time = time.perf_counter()
         seq_keys = [_generate_coalescing_key_sync(ctx) for ctx in contexts]
@@ -542,10 +546,10 @@ async def test_comprehensive_performance_comparison():
         mp_coalescing_time = time.perf_counter() - start_time
 
         coalescing_speedup = seq_coalescing_time / mp_coalescing_time if mp_coalescing_time > 0 else 1.0
-        scenario_results['coalescing_speedup'] = coalescing_speedup
+        scenario_results["coalescing_speedup"] = coalescing_speedup
 
         # Test analytics performance
-        metrics_data = benchmark.generate_test_metrics(scenario['metrics'])
+        metrics_data = benchmark.generate_test_metrics(scenario["metrics"])
 
         start_time = time.perf_counter()
         seq_analytics = _calculate_analytics_sync(metrics_data)
@@ -556,10 +560,10 @@ async def test_comprehensive_performance_comparison():
         mp_analytics_time = time.perf_counter() - start_time
 
         analytics_speedup = seq_analytics_time / mp_analytics_time if mp_analytics_time > 0 else 1.0
-        scenario_results['analytics_speedup'] = analytics_speedup
+        scenario_results["analytics_speedup"] = analytics_speedup
 
         # Test pattern matching performance
-        texts, patterns = benchmark.generate_test_texts_and_patterns(scenario['texts'], 8)
+        texts, patterns = benchmark.generate_test_texts_and_patterns(scenario["texts"], 8)
 
         start_time = time.perf_counter()
         seq_patterns = [_match_patterns_sync(text, patterns) for text in texts]
@@ -570,11 +574,11 @@ async def test_comprehensive_performance_comparison():
         mp_pattern_time = time.perf_counter() - start_time
 
         pattern_speedup = seq_pattern_time / mp_pattern_time if mp_pattern_time > 0 else 1.0
-        scenario_results['pattern_speedup'] = pattern_speedup
+        scenario_results["pattern_speedup"] = pattern_speedup
 
         # Calculate overall performance improvement
         overall_speedup = statistics.mean([coalescing_speedup, analytics_speedup, pattern_speedup])
-        scenario_results['overall_speedup'] = overall_speedup
+        scenario_results["overall_speedup"] = overall_speedup
 
         results_summary.append(scenario_results)
 
@@ -585,10 +589,10 @@ async def test_comprehensive_performance_comparison():
         print(f"  Overall speedup: {overall_speedup:.1f}x")
 
     # Calculate overall performance summary
-    avg_coalescing_speedup = statistics.mean([r['coalescing_speedup'] for r in results_summary])
-    avg_analytics_speedup = statistics.mean([r['analytics_speedup'] for r in results_summary])
-    avg_pattern_speedup = statistics.mean([r['pattern_speedup'] for r in results_summary])
-    avg_overall_speedup = statistics.mean([r['overall_speedup'] for r in results_summary])
+    avg_coalescing_speedup = statistics.mean([r["coalescing_speedup"] for r in results_summary])
+    avg_analytics_speedup = statistics.mean([r["analytics_speedup"] for r in results_summary])
+    avg_pattern_speedup = statistics.mean([r["pattern_speedup"] for r in results_summary])
+    avg_overall_speedup = statistics.mean([r["overall_speedup"] for r in results_summary])
 
     print(f"\n📊 Overall CPU-Bound Multiprocessing Performance Summary:")
     print(f"  Average coalescing speedup: {avg_coalescing_speedup:.1f}x (Target: ≥1.6x)")
@@ -607,6 +611,7 @@ async def test_comprehensive_performance_comparison():
     assert avg_analytics_speedup >= 2.0, f"Expected ≥2.0x analytics speedup"
 
     print(f"\n✅ All CPU-bound multiprocessing optimizations validated!")
+
 
 if __name__ == "__main__":
     # Run benchmarks directly

@@ -26,17 +26,19 @@ import threading
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.performance.functional_event_orchestrator import (
     FunctionalEventOrchestrator,
     RequestPriority,
     RequestContext,
     get_orchestrator,
-    orchestrated_operation
+    orchestrated_operation,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class MockAuthenticationService:
     """Mock service for authentication benchmarks"""
@@ -52,8 +54,8 @@ class MockAuthenticationService:
         self.call_count += 1
 
         # Track unique requests for coalescing analysis
-        user_id = kwargs.get('user_id', payload.get('user_id', 'unknown'))
-        scopes = payload.get('scopes', 'default')
+        user_id = kwargs.get("user_id", payload.get("user_id", "unknown"))
+        scopes = payload.get("scopes", "default")
         request_signature = f"{user_id}:{scopes}"
         self.unique_requests.add(request_signature)
 
@@ -67,12 +69,13 @@ class MockAuthenticationService:
             raise Exception("Authentication service temporarily unavailable")
 
         return {
-            'authenticated': True,
-            'access_token': f'token_{user_id}_{int(time.time())}',
-            'user_id': user_id,
-            'scopes': scopes,
-            'latency_ms': actual_latency * 1000
+            "authenticated": True,
+            "access_token": f"token_{user_id}_{int(time.time())}",
+            "user_id": user_id,
+            "scopes": scopes,
+            "latency_ms": actual_latency * 1000,
         }
+
 
 class MockAuthorizationService:
     """Mock service for authorization benchmarks"""
@@ -95,17 +98,18 @@ class MockAuthorizationService:
         if random.random() < self.failure_rate:
             raise Exception("Authorization service temporarily unavailable")
 
-        user_id = kwargs.get('user_id', payload.get('user_id', 'unknown'))
-        resource_type = payload.get('resource_type', 'default')
-        permission = payload.get('permission', 'read')
+        user_id = kwargs.get("user_id", payload.get("user_id", "unknown"))
+        resource_type = payload.get("resource_type", "default")
+        permission = payload.get("permission", "read")
 
         return {
-            'allowed': True,
-            'user_id': user_id,
-            'resource_type': resource_type,
-            'permission': permission,
-            'latency_ms': actual_latency * 1000
+            "allowed": True,
+            "user_id": user_id,
+            "resource_type": resource_type,
+            "permission": permission,
+            "latency_ms": actual_latency * 1000,
         }
+
 
 class PerformanceBenchmark:
     """Performance benchmark runner"""
@@ -117,21 +121,17 @@ class PerformanceBenchmark:
     async def setup_orchestrator(self, max_workers: int = 10) -> FunctionalEventOrchestrator:
         """Setup orchestrator with mock services"""
         orchestrator = FunctionalEventOrchestrator(
-            max_workers=max_workers,
-            coalescing_window_ms=100.0,
-            enable_analytics=True
+            max_workers=max_workers, coalescing_window_ms=100.0, enable_analytics=True
         )
 
         # Register operation handlers
-        orchestrator.register_operation('authenticate', self.auth_service.authenticate)
-        orchestrator.register_operation('authorize', self.authz_service.authorize)
+        orchestrator.register_operation("authenticate", self.auth_service.authenticate)
+        orchestrator.register_operation("authorize", self.authz_service.authorize)
 
         await orchestrator.start()
         return orchestrator
 
-    async def run_direct_benchmark(self,
-                                 num_requests: int,
-                                 duplicate_ratio: float = 0.4) -> Dict[str, Any]:
+    async def run_direct_benchmark(self, num_requests: int, duplicate_ratio: float = 0.4) -> Dict[str, Any]:
         """Run benchmark without orchestrator (direct service calls)"""
         logger.info(f"Running direct benchmark: {num_requests} requests, {duplicate_ratio:.0%} duplicates")
 
@@ -145,10 +145,10 @@ class PerformanceBenchmark:
         # Execute requests sequentially (simulating single-threaded processing)
         for req in requests:
             try:
-                if req['operation'] == 'authenticate':
-                    result = await self.auth_service.authenticate(req['payload'], user_id=req['user_id'])
+                if req["operation"] == "authenticate":
+                    result = await self.auth_service.authenticate(req["payload"], user_id=req["user_id"])
                 else:
-                    result = await self.authz_service.authorize(req['payload'], user_id=req['user_id'])
+                    result = await self.authz_service.authorize(req["payload"], user_id=req["user_id"])
 
                 results.append(result)
             except Exception as e:
@@ -157,27 +157,26 @@ class PerformanceBenchmark:
         total_time = time.perf_counter() - start_time
 
         # Calculate metrics
-        latencies = [r.get('latency_ms', 0) for r in results if 'latency_ms' in r]
+        latencies = [r.get("latency_ms", 0) for r in results if "latency_ms" in r]
 
         return {
-            'total_requests': num_requests,
-            'successful_requests': len(results),
-            'failed_requests': errors,
-            'total_time_seconds': total_time,
-            'throughput_rps': num_requests / total_time,
-            'avg_latency_ms': statistics.mean(latencies) if latencies else 0,
-            'p95_latency_ms': statistics.quantiles(latencies, n=20)[18] if len(latencies) > 20 else 0,
-            'p99_latency_ms': statistics.quantiles(latencies, n=100)[98] if len(latencies) > 100 else 0,
-            'duplicate_processing': num_requests * duplicate_ratio,  # All duplicates processed
-            'auth_service_calls': self.auth_service.call_count,
-            'authz_service_calls': self.authz_service.call_count,
-            'unique_auth_requests': len(self.auth_service.unique_requests)
+            "total_requests": num_requests,
+            "successful_requests": len(results),
+            "failed_requests": errors,
+            "total_time_seconds": total_time,
+            "throughput_rps": num_requests / total_time,
+            "avg_latency_ms": statistics.mean(latencies) if latencies else 0,
+            "p95_latency_ms": statistics.quantiles(latencies, n=20)[18] if len(latencies) > 20 else 0,
+            "p99_latency_ms": statistics.quantiles(latencies, n=100)[98] if len(latencies) > 100 else 0,
+            "duplicate_processing": num_requests * duplicate_ratio,  # All duplicates processed
+            "auth_service_calls": self.auth_service.call_count,
+            "authz_service_calls": self.authz_service.call_count,
+            "unique_auth_requests": len(self.auth_service.unique_requests),
         }
 
-    async def run_orchestrated_benchmark(self,
-                                       num_requests: int,
-                                       duplicate_ratio: float = 0.4,
-                                       max_workers: int = 10) -> Dict[str, Any]:
+    async def run_orchestrated_benchmark(
+        self, num_requests: int, duplicate_ratio: float = 0.4, max_workers: int = 10
+    ) -> Dict[str, Any]:
         """Run benchmark with orchestrator optimization"""
         logger.info(f"Running orchestrated benchmark: {num_requests} requests, {duplicate_ratio:.0%} duplicates")
 
@@ -198,13 +197,10 @@ class PerformanceBenchmark:
             # Execute requests concurrently through orchestrator
             tasks = []
             for req in requests:
-                priority = RequestPriority.HIGH if req['operation'] == 'authenticate' else RequestPriority.NORMAL
+                priority = RequestPriority.HIGH if req["operation"] == "authenticate" else RequestPriority.NORMAL
 
                 task = orchestrator.submit_request(
-                    operation_type=req['operation'],
-                    payload=req['payload'],
-                    priority=priority,
-                    user_id=req['user_id']
+                    operation_type=req["operation"], payload=req["payload"], priority=priority, user_id=req["user_id"]
                 )
                 tasks.append(task)
 
@@ -214,42 +210,40 @@ class PerformanceBenchmark:
             total_time = time.perf_counter() - start_time
 
             # Analyze results
-            successful_results = [r for r in results if isinstance(r, dict) and r.get('success', False)]
-            failed_results = [r for r in results if not (isinstance(r, dict) and r.get('success', False))]
+            successful_results = [r for r in results if isinstance(r, dict) and r.get("success", False)]
+            failed_results = [r for r in results if not (isinstance(r, dict) and r.get("success", False))]
 
             # Extract latencies
-            latencies = [r.get('latency_ms', 0) for r in successful_results]
-            coalesced_count = sum(1 for r in successful_results if r.get('coalesced', False))
-            cache_hits = sum(1 for r in successful_results if r.get('cache_hit', False))
+            latencies = [r.get("latency_ms", 0) for r in successful_results]
+            coalesced_count = sum(1 for r in successful_results if r.get("coalesced", False))
+            cache_hits = sum(1 for r in successful_results if r.get("cache_hit", False))
 
             # Get orchestrator metrics
             orchestrator_metrics = orchestrator.get_performance_metrics()
 
             return {
-                'total_requests': num_requests,
-                'successful_requests': len(successful_results),
-                'failed_requests': len(failed_results),
-                'total_time_seconds': total_time,
-                'throughput_rps': num_requests / total_time,
-                'avg_latency_ms': statistics.mean(latencies) if latencies else 0,
-                'p95_latency_ms': statistics.quantiles(latencies, n=20)[18] if len(latencies) > 20 else 0,
-                'p99_latency_ms': statistics.quantiles(latencies, n=100)[98] if len(latencies) > 100 else 0,
-                'coalesced_requests': coalesced_count,
-                'cache_hits': cache_hits,
-                'coalescing_rate': coalesced_count / num_requests,
-                'cache_hit_rate': cache_hits / num_requests,
-                'auth_service_calls': self.auth_service.call_count,
-                'authz_service_calls': self.authz_service.call_count,
-                'unique_auth_requests': len(self.auth_service.unique_requests),
-                'orchestrator_metrics': orchestrator_metrics
+                "total_requests": num_requests,
+                "successful_requests": len(successful_results),
+                "failed_requests": len(failed_results),
+                "total_time_seconds": total_time,
+                "throughput_rps": num_requests / total_time,
+                "avg_latency_ms": statistics.mean(latencies) if latencies else 0,
+                "p95_latency_ms": statistics.quantiles(latencies, n=20)[18] if len(latencies) > 20 else 0,
+                "p99_latency_ms": statistics.quantiles(latencies, n=100)[98] if len(latencies) > 100 else 0,
+                "coalesced_requests": coalesced_count,
+                "cache_hits": cache_hits,
+                "coalescing_rate": coalesced_count / num_requests,
+                "cache_hit_rate": cache_hits / num_requests,
+                "auth_service_calls": self.auth_service.call_count,
+                "authz_service_calls": self.authz_service.call_count,
+                "unique_auth_requests": len(self.auth_service.unique_requests),
+                "orchestrator_metrics": orchestrator_metrics,
             }
 
         finally:
             await orchestrator.stop()
 
-    def _generate_request_patterns(self,
-                                 num_requests: int,
-                                 duplicate_ratio: float) -> List[Dict[str, Any]]:
+    def _generate_request_patterns(self, num_requests: int, duplicate_ratio: float) -> List[Dict[str, Any]]:
         """Generate realistic request patterns with configurable duplication"""
         requests = []
 
@@ -258,33 +252,26 @@ class PerformanceBenchmark:
         duplicate_count = num_requests - unique_count
 
         users = [f"user_{i}" for i in range(max(10, unique_count // 2))]
-        scopes_options = ['openid profile', 'openid profile email', 'admin', 'read-only']
-        resources = ['ai_model', 'data_source', 'report', 'dashboard']
-        permissions = ['read', 'write', 'admin']
+        scopes_options = ["openid profile", "openid profile email", "admin", "read-only"]
+        resources = ["ai_model", "data_source", "report", "dashboard"]
+        permissions = ["read", "write", "admin"]
 
         # Generate unique requests
         for i in range(unique_count):
-            operation = 'authenticate' if i % 2 == 0 else 'authorize'
+            operation = "authenticate" if i % 2 == 0 else "authorize"
             user_id = random.choice(users)
 
-            if operation == 'authenticate':
-                payload = {
-                    'user_id': user_id,
-                    'scopes': random.choice(scopes_options)
-                }
+            if operation == "authenticate":
+                payload = {"user_id": user_id, "scopes": random.choice(scopes_options)}
             else:
                 payload = {
-                    'user_id': user_id,
-                    'resource_type': random.choice(resources),
-                    'resource_id': f"resource_{i}",
-                    'permission': random.choice(permissions)
+                    "user_id": user_id,
+                    "resource_type": random.choice(resources),
+                    "resource_id": f"resource_{i}",
+                    "permission": random.choice(permissions),
                 }
 
-            requests.append({
-                'operation': operation,
-                'payload': payload,
-                'user_id': user_id
-            })
+            requests.append({"operation": operation, "payload": payload, "user_id": user_id})
 
         # Add duplicate requests (simulate real-world patterns)
         for _ in range(duplicate_count):
@@ -295,6 +282,7 @@ class PerformanceBenchmark:
         random.shuffle(requests)
 
         return requests
+
 
 @pytest.mark.asyncio
 async def test_latency_reduction_benchmark():
@@ -312,10 +300,9 @@ async def test_latency_reduction_benchmark():
     orchestrated_results = await benchmark.run_orchestrated_benchmark(num_requests, duplicate_ratio)
 
     # Calculate improvements
-    latency_improvement = (
-        (direct_results['avg_latency_ms'] - orchestrated_results['avg_latency_ms']) /
-        direct_results['avg_latency_ms']
-    )
+    latency_improvement = (direct_results["avg_latency_ms"] - orchestrated_results["avg_latency_ms"]) / direct_results[
+        "avg_latency_ms"
+    ]
 
     logger.info(f"Latency Improvement Results:")
     logger.info(f"  Direct avg latency: {direct_results['avg_latency_ms']:.2f}ms")
@@ -325,9 +312,10 @@ async def test_latency_reduction_benchmark():
 
     # Verify targets
     assert latency_improvement >= 0.40, f"Expected ≥40% latency improvement, got {latency_improvement:.1%}"
-    assert orchestrated_results['coalescing_rate'] >= 0.30, f"Expected ≥30% coalescing rate"
+    assert orchestrated_results["coalescing_rate"] >= 0.30, f"Expected ≥30% coalescing rate"
 
     print(f"✅ Latency reduction: {latency_improvement:.1%} (Target: ≥40%)")
+
 
 @pytest.mark.asyncio
 async def test_throughput_improvement_benchmark():
@@ -343,14 +331,10 @@ async def test_throughput_improvement_benchmark():
     direct_results = await benchmark.run_direct_benchmark(num_requests, duplicate_ratio)
 
     # Run orchestrated benchmark with high concurrency
-    orchestrated_results = await benchmark.run_orchestrated_benchmark(
-        num_requests, duplicate_ratio, max_workers
-    )
+    orchestrated_results = await benchmark.run_orchestrated_benchmark(num_requests, duplicate_ratio, max_workers)
 
     # Calculate improvements
-    throughput_improvement = (
-        orchestrated_results['throughput_rps'] / direct_results['throughput_rps']
-    )
+    throughput_improvement = orchestrated_results["throughput_rps"] / direct_results["throughput_rps"]
 
     logger.info(f"Throughput Improvement Results:")
     logger.info(f"  Direct throughput: {direct_results['throughput_rps']:.1f} RPS")
@@ -361,6 +345,7 @@ async def test_throughput_improvement_benchmark():
     assert throughput_improvement >= 2.0, f"Expected ≥2.0x throughput improvement, got {throughput_improvement:.1f}x"
 
     print(f"✅ Throughput improvement: {throughput_improvement:.1f}x (Target: ≥2.0x)")
+
 
 @pytest.mark.asyncio
 async def test_resource_utilization_benchmark():
@@ -379,16 +364,14 @@ async def test_resource_utilization_benchmark():
 
     # Calculate resource efficiency
     # Direct: all requests processed = num_requests service calls
-    direct_service_calls = direct_results['auth_service_calls'] + direct_results['authz_service_calls']
+    direct_service_calls = direct_results["auth_service_calls"] + direct_results["authz_service_calls"]
 
     # Orchestrated: coalesced requests reduce service calls
     orchestrated_service_calls = (
-        orchestrated_results['auth_service_calls'] + orchestrated_results['authz_service_calls']
+        orchestrated_results["auth_service_calls"] + orchestrated_results["authz_service_calls"]
     )
 
-    resource_efficiency = (
-        (direct_service_calls - orchestrated_service_calls) / direct_service_calls
-    )
+    resource_efficiency = (direct_service_calls - orchestrated_service_calls) / direct_service_calls
 
     logger.info(f"Resource Utilization Results:")
     logger.info(f"  Direct service calls: {direct_service_calls}")
@@ -400,6 +383,7 @@ async def test_resource_utilization_benchmark():
     assert resource_efficiency >= 0.20, f"Expected ≥20% resource efficiency gain, got {resource_efficiency:.1%}"
 
     print(f"✅ Resource efficiency: {resource_efficiency:.1%} (Target: ≥20%)")
+
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_resilience():
@@ -420,13 +404,13 @@ async def test_circuit_breaker_resilience():
                 raise Exception("Service unavailable")
 
             # Succeed afterwards
-            return {'success': True, 'call_count': self.call_count}
+            return {"success": True, "call_count": self.call_count}
 
     failing_service = FailingService()
 
     # Setup orchestrator with circuit breaker
     orchestrator = FunctionalEventOrchestrator(max_workers=5)
-    orchestrator.register_operation('failing_op', failing_service.failing_operation)
+    orchestrator.register_operation("failing_op", failing_service.failing_operation)
     await orchestrator.start()
 
     try:
@@ -434,17 +418,15 @@ async def test_circuit_breaker_resilience():
         tasks = []
         for i in range(50):
             task = orchestrator.submit_request(
-                operation_type='failing_op',
-                payload={'request_id': i},
-                priority=RequestPriority.NORMAL
+                operation_type="failing_op", payload={"request_id": i}, priority=RequestPriority.NORMAL
             )
             tasks.append(task)
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Analyze results
-        successful_results = [r for r in results if isinstance(r, dict) and r.get('success', False)]
-        failed_results = [r for r in results if not (isinstance(r, dict) and r.get('success', False))]
+        successful_results = [r for r in results if isinstance(r, dict) and r.get("success", False)]
+        failed_results = [r for r in results if not (isinstance(r, dict) and r.get("success", False))]
 
         # Circuit breaker should prevent most failures after initial threshold
         service_call_ratio = failing_service.call_count / 50  # Should be much less than 1.0
@@ -465,15 +447,16 @@ async def test_circuit_breaker_resilience():
     finally:
         await orchestrator.stop()
 
+
 @pytest.mark.asyncio
 async def test_comprehensive_performance_comparison():
     """Comprehensive performance comparison: Direct vs Orchestrated"""
     benchmark = PerformanceBenchmark()
 
     test_scenarios = [
-        {'requests': 500, 'duplicates': 0.2, 'name': 'Low Duplication'},
-        {'requests': 1000, 'duplicates': 0.5, 'name': 'Medium Duplication'},
-        {'requests': 1500, 'duplicates': 0.8, 'name': 'High Duplication'},
+        {"requests": 500, "duplicates": 0.2, "name": "Low Duplication"},
+        {"requests": 1000, "duplicates": 0.5, "name": "Medium Duplication"},
+        {"requests": 1500, "duplicates": 0.8, "name": "High Duplication"},
     ]
 
     results_summary = []
@@ -482,36 +465,28 @@ async def test_comprehensive_performance_comparison():
         logger.info(f"Testing scenario: {scenario['name']}")
 
         # Run benchmarks
-        direct = await benchmark.run_direct_benchmark(
-            scenario['requests'], scenario['duplicates']
-        )
+        direct = await benchmark.run_direct_benchmark(scenario["requests"], scenario["duplicates"])
 
-        orchestrated = await benchmark.run_orchestrated_benchmark(
-            scenario['requests'], scenario['duplicates']
-        )
+        orchestrated = await benchmark.run_orchestrated_benchmark(scenario["requests"], scenario["duplicates"])
 
         # Calculate improvements
-        latency_improvement = (
-            (direct['avg_latency_ms'] - orchestrated['avg_latency_ms']) /
-            direct['avg_latency_ms']
-        )
+        latency_improvement = (direct["avg_latency_ms"] - orchestrated["avg_latency_ms"]) / direct["avg_latency_ms"]
 
-        throughput_improvement = (
-            orchestrated['throughput_rps'] / direct['throughput_rps']
-        )
+        throughput_improvement = orchestrated["throughput_rps"] / direct["throughput_rps"]
 
         resource_efficiency = (
-            (direct['auth_service_calls'] + direct['authz_service_calls'] -
-             orchestrated['auth_service_calls'] - orchestrated['authz_service_calls']) /
-            (direct['auth_service_calls'] + direct['authz_service_calls'])
-        )
+            direct["auth_service_calls"]
+            + direct["authz_service_calls"]
+            - orchestrated["auth_service_calls"]
+            - orchestrated["authz_service_calls"]
+        ) / (direct["auth_service_calls"] + direct["authz_service_calls"])
 
         scenario_results = {
-            'scenario': scenario['name'],
-            'latency_improvement': latency_improvement,
-            'throughput_improvement': throughput_improvement,
-            'resource_efficiency': resource_efficiency,
-            'coalescing_rate': orchestrated['coalescing_rate']
+            "scenario": scenario["name"],
+            "latency_improvement": latency_improvement,
+            "throughput_improvement": throughput_improvement,
+            "resource_efficiency": resource_efficiency,
+            "coalescing_rate": orchestrated["coalescing_rate"],
         }
 
         results_summary.append(scenario_results)
@@ -523,9 +498,9 @@ async def test_comprehensive_performance_comparison():
         print(f"  Coalescing rate: {orchestrated['coalescing_rate']:.1%}")
 
     # Overall performance summary
-    avg_latency_improvement = statistics.mean([r['latency_improvement'] for r in results_summary])
-    avg_throughput_improvement = statistics.mean([r['throughput_improvement'] for r in results_summary])
-    avg_resource_efficiency = statistics.mean([r['resource_efficiency'] for r in results_summary])
+    avg_latency_improvement = statistics.mean([r["latency_improvement"] for r in results_summary])
+    avg_throughput_improvement = statistics.mean([r["throughput_improvement"] for r in results_summary])
+    avg_resource_efficiency = statistics.mean([r["resource_efficiency"] for r in results_summary])
 
     print(f"\n📊 Overall Performance Summary:")
     print(f"  Average latency improvement: {avg_latency_improvement:.1%} (Target: ≥40%)")
@@ -538,6 +513,7 @@ async def test_comprehensive_performance_comparison():
     assert avg_resource_efficiency >= 0.15, f"Average resource efficiency below target"
 
     print(f"\n✅ All performance targets exceeded!")
+
 
 if __name__ == "__main__":
     # Run benchmarks directly

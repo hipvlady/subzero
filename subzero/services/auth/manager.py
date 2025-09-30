@@ -7,7 +7,7 @@ Production-ready integration with all Auth0 services
 
 SDK Versions:
 - auth0-python: 4.7.0+
-- fga-client: 1.3.7+
+- openfga-sdk: 0.3.0+
 - PyJWT: 2.8.0+
 """
 
@@ -22,8 +22,8 @@ import httpx
 import jwt
 from auth0.authentication import GetToken
 from auth0.management import Auth0
-from fga_client import ClientConfiguration, FgaClient
-from fga_client.models import CheckRequest, WriteRequest, TupleKey, WriteRequestWrites, ReadRequest
+from openfga_sdk import ClientConfiguration, OpenFgaClient as FgaClient
+from openfga_sdk import CheckRequest, WriteRequest, TupleKey, WriteRequestWrites, ReadRequest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 

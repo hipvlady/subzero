@@ -15,7 +15,8 @@ from typing import List, Dict
 # Import modules to test
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src"))
 
 from auth.eddsa_key_manager import EdDSAKeyManager
 from auth.cuckoo_cache import CuckooCache
@@ -47,10 +48,10 @@ class TestEdDSAPerformance:
 
         # Test payload
         payload = {
-            'sub': 'test_user',
-            'iss': 'test_client',
-            'aud': 'https://test.auth0.com/oauth/token',
-            'exp': int(time.time()) + 300
+            "sub": "test_user",
+            "iss": "test_client",
+            "aud": "https://test.auth0.com/oauth/token",
+            "exp": int(time.time()) + 300,
         }
 
         # Measure 1000 signing operations
@@ -75,7 +76,7 @@ class TestEdDSAPerformance:
         manager = EdDSAKeyManager()
 
         # Create test token
-        payload = {'sub': 'test_user', 'exp': int(time.time()) + 300}
+        payload = {"sub": "test_user", "exp": int(time.time()) + 300}
         token = manager.sign_jwt(payload)
 
         # Measure verification performance
@@ -86,7 +87,7 @@ class TestEdDSAPerformance:
             elapsed = time.perf_counter() - start
             times.append(elapsed * 1000)
 
-            assert verified['sub'] == 'test_user'
+            assert verified["sub"] == "test_user"
 
         avg_ms = statistics.mean(times)
         assert avg_ms < 1.0, f"EdDSA verification too slow: {avg_ms:.2f}ms"
@@ -101,10 +102,7 @@ class TestCuckooCachePerformance:
         cache = CuckooCache(capacity=10000)
 
         # Test data
-        test_data = [
-            (np.uint64(i), {'token': f'token_{i}', 'user': f'user_{i}'})
-            for i in range(5000)
-        ]
+        test_data = [(np.uint64(i), {"token": f"token_{i}", "user": f"user_{i}"}) for i in range(5000)]
 
         # Measure insertion performance
         start = time.perf_counter()
@@ -124,7 +122,7 @@ class TestCuckooCachePerformance:
         test_hashes = []
         for i in range(5000):
             user_hash = np.uint64(i)
-            cache.insert(user_hash, {'token': f'token_{i}'})
+            cache.insert(user_hash, {"token": f"token_{i}"})
             test_hashes.append(user_hash)
 
         # Measure lookup performance
@@ -145,7 +143,7 @@ class TestCuckooCachePerformance:
 
         # Insert 800 items (80% capacity)
         for i in range(800):
-            cache.insert(np.uint64(i), {'token': f'token_{i}'})
+            cache.insert(np.uint64(i), {"token": f"token_{i}"})
 
         # Test lookups with 90% hit ratio
         hits = 0
@@ -174,7 +172,7 @@ class TestCuckooCachePerformance:
 
         start = time.perf_counter()
         for i, hash_val in enumerate(collision_hashes):
-            cache.insert(hash_val, {'data': f'item_{i}'})
+            cache.insert(hash_val, {"data": f"item_{i}"})
         elapsed = time.perf_counter() - start
 
         # Verify all items can be retrieved
@@ -196,7 +194,7 @@ class TestSIMDOperations:
         hasher = SIMDHasher(batch_size=128)
 
         # Add batch of user IDs
-        user_ids = [f'user_{i}@example.com' for i in range(128)]
+        user_ids = [f"user_{i}@example.com" for i in range(128)]
         for uid in user_ids:
             hasher.add_to_batch(uid)
 
@@ -229,12 +227,12 @@ class TestSIMDOperations:
         print(f"Speedup: {results['speedup']:.1f}x")
 
         # Both should be reasonably fast
-        assert results['fnv1a_time_ms'] < 10.0, "FNV-1a too slow"
-        assert results['xxhash_time_ms'] < 10.0, "xxHash too slow"
+        assert results["fnv1a_time_ms"] < 10.0, "FNV-1a too slow"
+        assert results["xxhash_time_ms"] < 10.0, "xxHash too slow"
 
     def test_single_hash_performance(self):
         """Test individual hash function performance"""
-        test_data = np.frombuffer(b'test_user_id_12345', dtype=np.uint8)
+        test_data = np.frombuffer(b"test_user_id_12345", dtype=np.uint8)
 
         # Measure xxHash64 performance
         times = []
@@ -265,7 +263,7 @@ class TestTokenPool:
         await asyncio.sleep(0.5)
 
         status = pool.get_pool_status()
-        assert status['current_tokens'] > 0, "No tokens generated"
+        assert status["current_tokens"] > 0, "No tokens generated"
 
         await pool.stop_precomputation()
         print(f"✅ Token pool generated {status['current_tokens']} tokens")
@@ -285,15 +283,13 @@ class TestTokenPool:
         for i in range(50):
             start = time.perf_counter()
             token = await pool.get_token(
-                user_id=f'user_{i}',
-                client_id='test_client',
-                audience='https://test.auth0.com/oauth/token'
+                user_id=f"user_{i}", client_id="test_client", audience="https://test.auth0.com/oauth/token"
             )
             elapsed = time.perf_counter() - start
             times.append(elapsed * 1000)  # Convert to ms
 
             if token:  # Only count successful retrievals
-                assert 'user_' in token
+                assert "user_" in token
 
         await pool.stop_precomputation()
 
@@ -306,21 +302,13 @@ class TestTokenPool:
     async def test_adaptive_pool_sizing(self):
         """Test adaptive pool size adjustment"""
         key_manager = EdDSAKeyManager()
-        adaptive_pool = AdaptiveTokenPool(
-            initial_size=50,
-            max_size=200,
-            key_manager=key_manager
-        )
+        adaptive_pool = AdaptiveTokenPool(initial_size=50, max_size=200, key_manager=key_manager)
 
         await adaptive_pool.start()
 
         # Simulate high demand
         for _ in range(100):
-            await adaptive_pool.get_token(
-                user_id='test_user',
-                client_id='test_client',
-                audience='test_audience'
-            )
+            await adaptive_pool.get_token(user_id="test_user", client_id="test_client", audience="test_audience")
 
         await asyncio.sleep(0.1)  # Let adaptive sizing kick in
 
@@ -337,26 +325,22 @@ class TestEndToEndPerformance:
     async def test_complete_authentication_flow(self):
         """Verify complete authentication flow meets targets"""
         # Mock aiohttp session to avoid real HTTP calls
-        with patch('aiohttp.ClientSession') as mock_session:
+        with patch("aiohttp.ClientSession") as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 200
-            mock_response.json = AsyncMock(return_value={
-                'access_token': 'test_token',
-                'expires_in': 3600,
-                'token_type': 'Bearer'
-            })
+            mock_response.json = AsyncMock(
+                return_value={"access_token": "test_token", "expires_in": 3600, "token_type": "Bearer"}
+            )
             mock_session.return_value.post.return_value.__aenter__ = AsyncMock(return_value=mock_response)
             mock_session.return_value.post.return_value.__aexit__ = AsyncMock(return_value=None)
 
             auth = HighPerformanceAuthenticator(
-                auth0_domain="test.auth0.com",
-                client_id="test_client",
-                cache_capacity=1000
+                auth0_domain="test.auth0.com", client_id="test_client", cache_capacity=1000
             )
 
             # Warm up cache with some authentications
             for i in range(10):
-                await auth.authenticate(f'user_{i}')
+                await auth.authenticate(f"user_{i}")
 
             # Measure performance on cached requests
             latencies = []
@@ -364,10 +348,10 @@ class TestEndToEndPerformance:
 
             for i in range(100):
                 req_start = time.perf_counter()
-                result = await auth.authenticate(f'user_{i % 10}')  # Use cached users
+                result = await auth.authenticate(f"user_{i % 10}")  # Use cached users
                 latencies.append((time.perf_counter() - req_start) * 1000)
 
-                assert 'access_token' in result
+                assert "access_token" in result
 
             elapsed = time.perf_counter() - start
 
@@ -392,20 +376,15 @@ class TestEndToEndPerformance:
     async def test_concurrent_authentication_load(self):
         """Test performance under concurrent load"""
         # Mock HTTP calls
-        with patch('aiohttp.ClientSession') as mock_session:
+        with patch("aiohttp.ClientSession") as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 200
-            mock_response.json = AsyncMock(return_value={
-                'access_token': 'test_token',
-                'expires_in': 3600
-            })
+            mock_response.json = AsyncMock(return_value={"access_token": "test_token", "expires_in": 3600})
             mock_session.return_value.post.return_value.__aenter__ = AsyncMock(return_value=mock_response)
             mock_session.return_value.post.return_value.__aexit__ = AsyncMock(return_value=None)
 
             auth = HighPerformanceAuthenticator(
-                auth0_domain="test.auth0.com",
-                client_id="test_client",
-                cache_capacity=1000
+                auth0_domain="test.auth0.com", client_id="test_client", cache_capacity=1000
             )
 
             async def auth_worker(worker_id: int, num_requests: int) -> List[float]:
@@ -413,17 +392,14 @@ class TestEndToEndPerformance:
                 latencies = []
                 for i in range(num_requests):
                     start = time.perf_counter()
-                    await auth.authenticate(f'worker_{worker_id}_user_{i}')
+                    await auth.authenticate(f"worker_{worker_id}_user_{i}")
                     latencies.append((time.perf_counter() - start) * 1000)
                 return latencies
 
             # Run 10 concurrent workers, 20 requests each
             start_time = time.perf_counter()
 
-            tasks = [
-                auth_worker(worker_id, 20)
-                for worker_id in range(10)
-            ]
+            tasks = [auth_worker(worker_id, 20) for worker_id in range(10)]
 
             results = await asyncio.gather(*tasks)
             elapsed = time.perf_counter() - start_time
@@ -456,21 +432,17 @@ class TestMemoryEfficiency:
 
         # Insert test data
         for i in range(5000):
-            token_data = {
-                'access_token': f'token_{i}' * 10,  # ~100 chars
-                'user_id': f'user_{i}',
-                'expires_in': 3600
-            }
+            token_data = {"access_token": f"token_{i}" * 10, "user_id": f"user_{i}", "expires_in": 3600}  # ~100 chars
             cache.insert(np.uint64(i), token_data)
 
         # Check memory usage is reasonable
         stats = cache.get_stats()
 
         # Should have high occupancy
-        assert stats['occupancy'] > 0.2, f"Low occupancy: {stats['occupancy']:.2%}"
+        assert stats["occupancy"] > 0.2, f"Low occupancy: {stats['occupancy']:.2%}"
 
         # Should have good hit ratio in testing
-        hit_ratio = stats['hit_ratio']
+        hit_ratio = stats["hit_ratio"]
         print(f"✅ Cache stats: {stats}")
 
     def test_token_pool_memory_efficiency(self):
@@ -480,6 +452,7 @@ class TestMemoryEfficiency:
 
         # Generate some tokens
         import asyncio
+
         async def fill_pool():
             await pool.start_precomputation()
             await asyncio.sleep(1.0)
