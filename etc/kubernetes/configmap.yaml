@@ -1,0 +1,30 @@
+# Copyright (c) Subzero Development Team.
+# Distributed under the terms of the Modified BSD License.
+
+# ConfigMap for Subzero Gateway
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: subzero-config
+  namespace: subzero
+  labels:
+    app: subzero
+data:
+  # Auth0 Configuration (non-sensitive)
+  auth0-audience: "https://api.subzero.dev"
+  fga-api-url: "https://api.us1.fga.dev"
+
+  # Performance Settings
+  cache-capacity: "10000"
+  max-connections: "1000"
+  enable-multiprocessing: "true"
+
+  # Security Settings
+  enable-bot-detection: "true"
+  threat-detection-enabled: "true"
+  rate-limit-requests: "1000"
+  rate-limit-window: "60"
+
+  # Monitoring
+  prometheus-enabled: "true"
+  log-level: "INFO"

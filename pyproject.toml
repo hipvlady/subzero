@@ -1,0 +1,192 @@
+# Copyright (c) Subzero Development Team.
+# Distributed under the terms of the Modified BSD License.
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "subzero"
+dynamic = ["version"]
+description = "Zero Trust API Gateway with Enterprise-Grade Performance"
+readme = "readme.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Subzero Development Team", email = "dev@subzero.dev"}
+]
+keywords = [
+    "zero-trust",
+    "api-gateway",
+    "auth0",
+    "authentication",
+    "authorization",
+    "security",
+    "jwt",
+    "ai",
+    "mcp"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: Security",
+    "Topic :: Security :: Cryptography",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.31.1",
+    "aiohttp>=3.9.1",
+    "httpx>=0.27.1",
+    "auth0-python>=4.7.0",
+    "PyJWT>=2.8.0",
+    "cryptography>=41.0.7",
+    "python-jose[cryptography]>=3.3.0",
+    "numpy>=1.26.3",
+    "numba>=0.59.0",
+    "asyncpg>=0.29.0",
+    "redis>=5.0.1",
+    "aiocache>=0.12.3",
+    "orjson>=3.9.10",
+    "mcp>=1.14.0",
+    "pydantic>=2.11.0",
+    "pydantic-settings>=2.5.2",
+    "prometheus-client>=0.19.0",
+    "opentelemetry-api>=1.22.0",
+    "opentelemetry-sdk>=1.22.0",
+    "structlog>=24.1.0",
+    "python-multipart>=0.0.20",
+    "email-validator>=2.1.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-dotenv>=1.0.0",
+    "uvloop>=0.19.0",
+    "authlib>=1.3.0",
+    "tornado>=6.4.0",
+    "jupyter-core>=5.7.1",
+    "traitlets>=5.14.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+    "pytest-benchmark>=4.0",
+    "black>=23.12",
+    "ruff>=0.1",
+    "mypy>=1.8",
+    "sphinx>=7.2",
+    "sphinx-rtd-theme>=2.0",
+]
+testing = [
+    "locust>=2.20",
+    "psutil>=5.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/subzero-dev/subzero"
+Documentation = "https://subzero.readthedocs.io"
+Repository = "https://github.com/subzero-dev/subzero"
+"Bug Tracker" = "https://github.com/subzero-dev/subzero/issues"
+Changelog = "https://github.com/subzero-dev/subzero/blob/main/CHANGELOG.md"
+
+[project.scripts]
+subzero = "subzero.__main__:main"
+
+[tool.setuptools]
+packages = ["subzero"]
+
+[tool.setuptools.dynamic]
+version = {attr = "subzero._version.__version__"}
+
+[tool.black]
+line-length = 120
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "performance: marks tests as performance tests",
+]
+
+[tool.coverage.run]
+source = ["subzero"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_calls = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "normal"
+ignore_missing_imports = true

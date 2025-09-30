@@ -1,0 +1,11 @@
+# Copyright (c) Subzero Development Team.
+# Distributed under the terms of the Modified BSD License.
+
+# Namespace for Subzero
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: subzero
+  labels:
+    name: subzero
+    environment: production

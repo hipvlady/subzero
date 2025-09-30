@@ -1,0 +1,144 @@
+# Copyright (c) Subzero Development Team.
+# Distributed under the terms of the Modified BSD License.
+
+version: '3.8'
+
+services:
+  # Subzero Gateway
+  subzero:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        VCS_REF: ${VCS_REF:-}
+        VERSION: ${VERSION:-0.1.0}
+    image: subzero:latest
+    container_name: subzero-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      # Auth0 Configuration
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      AUTH0_MANAGEMENT_API_TOKEN: ${AUTH0_MANAGEMENT_API_TOKEN}
+
+      # Auth0 FGA Configuration
+      FGA_STORE_ID: ${FGA_STORE_ID}
+      FGA_CLIENT_ID: ${FGA_CLIENT_ID}
+      FGA_CLIENT_SECRET: ${FGA_CLIENT_SECRET}
+      FGA_API_URL: ${FGA_API_URL:-https://api.us1.fga.dev}
+
+      # Redis Configuration
+      REDIS_URL: redis://redis:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+
+      # Performance Settings
+      ENABLE_MULTIPROCESSING: ${ENABLE_MULTIPROCESSING:-true}
+      CACHE_CAPACITY: ${CACHE_CAPACITY:-10000}
+      MAX_CONNECTIONS: ${MAX_CONNECTIONS:-1000}
+
+      # Security Settings
+      ENABLE_BOT_DETECTION: ${ENABLE_BOT_DETECTION:-true}
+      THREAT_DETECTION_ENABLED: ${THREAT_DETECTION_ENABLED:-true}
+
+      # Monitoring
+      PROMETHEUS_ENABLED: ${PROMETHEUS_ENABLED:-true}
+    depends_on:
+      - redis
+    networks:
+      - subzero-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - ./logs:/logs
+      - ./data:/data
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: subzero-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    networks:
+      - subzero-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - redis-data:/data
+
+  # Prometheus (Optional - for monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: subzero-prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - subzero-network
+    restart: unless-stopped
+    volumes:
+      - ./etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    profiles:
+      - monitoring
+
+  # Grafana (Optional - for dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: subzero-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    networks:
+      - subzero-network
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./etc/grafana:/etc/grafana/provisioning:ro
+    profiles:
+      - monitoring
+
+networks:
+  subzero-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+# ========================================
+# Usage:
+#
+# Start services:
+#   docker-compose up -d
+#
+# Start with monitoring:
+#   docker-compose --profile monitoring up -d
+#
+# View logs:
+#   docker-compose logs -f subzero
+#
+# Stop services:
+#   docker-compose down
+#
+# Remove volumes:
+#   docker-compose down -v
+# ========================================
