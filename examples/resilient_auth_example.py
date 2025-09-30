@@ -6,9 +6,13 @@ to cached validation when Auth0 services are unavailable.
 """
 
 import asyncio
-from src.auth.auth0_integration import Auth0Configuration
-from src.auth.resilient_auth_service import ResilientAuthService
-from config.settings import settings
+
+from subzero.config.defaults import Settings
+from subzero.services.auth.manager import Auth0Configuration
+from subzero.services.auth.resilient import ResilientAuthService
+
+# Load settings
+settings = Settings()
 
 
 async def main():
@@ -22,30 +26,24 @@ async def main():
         fga_store_id=settings.FGA_STORE_ID,
         fga_client_id=settings.FGA_CLIENT_ID,
         fga_client_secret=settings.FGA_CLIENT_SECRET,
-        fga_api_url=settings.FGA_API_URL
+        fga_api_url=settings.FGA_API_URL,
     )
 
     # Create resilient auth service
-    service = ResilientAuthService(
-        auth0_config=config,
-        enable_degradation=True
-    )
+    service = ResilientAuthService(auth0_config=config, enable_degradation=True)
 
     # Start all services (health monitoring, audit trail, degradation)
     await service.start()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("Resilient Authentication Service - Demo")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
     # Test 1: Normal authentication with Auth0
     print("Test 1: Normal Authentication")
     print("-" * 70)
 
-    result = await service.authenticate(
-        user_id="auth0|test_user_123",
-        scopes="openid profile email"
-    )
+    result = await service.authenticate(user_id="auth0|test_user_123", scopes="openid profile email")
 
     print(f"✅ Success: {result.success}")
     print(f"   Source: {result.source}")
@@ -60,10 +58,7 @@ async def main():
     print("-" * 70)
 
     authz_result = await service.check_permission(
-        user_id="auth0|test_user_123",
-        resource_type="document",
-        resource_id="doc_456",
-        relation="viewer"
+        user_id="auth0|test_user_123", resource_type="document", resource_id="doc_456", relation="viewer"
     )
 
     print(f"✅ Allowed: {authz_result.allowed}")
@@ -90,8 +85,8 @@ async def main():
     # In real scenario, this would use cached token validation
     result = await service.authenticate(
         user_id="auth0|test_user_123",
-        token=result.token_data.get('access_token') if result.token_data else None,
-        scopes="openid profile email"
+        token=result.token_data.get("access_token") if result.token_data else None,
+        scopes="openid profile email",
     )
 
     print(f"✅ Success: {result.success}")
@@ -105,10 +100,7 @@ async def main():
     print("-" * 70)
 
     authz_result = await service.check_permission(
-        user_id="auth0|test_user_123",
-        resource_type="document",
-        resource_id="doc_456",
-        relation="viewer"
+        user_id="auth0|test_user_123", resource_type="document", resource_id="doc_456", relation="viewer"
     )
 
     print(f"✅ Allowed: {authz_result.allowed}")
@@ -118,14 +110,14 @@ async def main():
     print()
 
     # Display comprehensive metrics
-    print("="*70)
+    print("=" * 70)
     print("Service Metrics")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
     metrics = service.get_service_metrics()
 
     print("Authentication:")
-    auth_metrics = metrics['authentication']
+    auth_metrics = metrics["authentication"]
     print(f"  Total Requests: {auth_metrics['total_requests']}")
     print(f"  Auth0 Success: {auth_metrics['auth0_success']}")
     print(f"  Cached Success: {auth_metrics['cached_success']}")
@@ -134,7 +126,7 @@ async def main():
     print()
 
     print("Authorization:")
-    authz_metrics = metrics['authorization']
+    authz_metrics = metrics["authorization"]
     print(f"  Total Checks: {authz_metrics['total_checks']}")
     print(f"  FGA Success: {authz_metrics['fga_success']}")
     print(f"  Cached Success: {authz_metrics['cached_success']}")
@@ -143,13 +135,13 @@ async def main():
     print()
 
     print("Performance:")
-    perf_metrics = metrics['performance']
+    perf_metrics = metrics["performance"]
     print(f"  Average Latency: {perf_metrics['avg_latency_ms']:.2f}ms")
     print()
 
-    if 'degradation' in metrics:
+    if "degradation" in metrics:
         print("Degradation Status:")
-        deg_metrics = metrics['degradation']
+        deg_metrics = metrics["degradation"]
         print(f"  Current Mode: {deg_metrics['current_mode']}")
         print(f"  Degradation Duration: {deg_metrics['degradation_duration_seconds']:.0f}s")
         print(f"  Cached Credentials: {deg_metrics['cached_credentials']}")

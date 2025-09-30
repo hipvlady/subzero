@@ -3,19 +3,18 @@ Integration Verification Script
 Verifies all components are properly integrated and can be imported
 """
 
-import sys
 import importlib
-from typing import List, Tuple
+import sys
 
 # Color codes for terminal output
-GREEN = '\033[92m'
-RED = '\033[91m'
-YELLOW = '\033[93m'
-BLUE = '\033[94m'
-RESET = '\033[0m'
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+RESET = "\033[0m"
 
 
-def test_import(module_path: str, component_name: str) -> Tuple[bool, str]:
+def test_import(module_path: str, component_name: str) -> tuple[bool, str]:
     """
     Test if a module can be imported
 
@@ -42,44 +41,36 @@ def main():
     # Define all components to verify
     components = [
         # Core Orchestrator
-        ("src.performance.functional_event_orchestrator", "Functional Event Orchestrator"),
-
+        ("subzero.services.orchestrator.event_loop", "Functional Event Orchestrator"),
+        ("subzero.services.orchestrator.multiprocessing", "Multiprocessing Engine"),
         # Authentication
-        ("src.auth.private_key_jwt", "Private Key JWT"),
-        ("src.auth.auth0_integration", "Auth0 Integration"),
-        ("src.auth.oauth2_pkce", "OAuth 2.1 + PKCE"),
-        ("src.auth.metadata_discovery", "Metadata Discovery"),
-        ("src.auth.dynamic_client_registration", "Dynamic Client Registration"),
-        ("src.auth.token_vault_integration", "Token Vault Integration"),
-        ("src.auth.xaa_protocol", "XAA Protocol"),
-        ("src.auth.app_registry", "Application Registry"),
-        ("src.auth.resilient_auth_service", "Resilient Auth Service"),
-
+        ("subzero.services.auth.jwt", "Private Key JWT"),
+        ("subzero.services.auth.manager", "Auth0 Integration"),
+        ("subzero.services.auth.oauth", "OAuth 2.1 + PKCE"),
+        ("subzero.services.auth.vault", "Token Vault Integration"),
+        ("subzero.services.auth.xaa", "XAA Protocol"),
+        ("subzero.services.auth.registry", "Application Registry"),
+        ("subzero.services.auth.resilient", "Resilient Auth Service"),
         # Authorization
-        ("src.fga.authorization_engine", "FGA Authorization Engine"),
-        ("src.fga.rebac_engine", "ReBAC Engine"),
-        ("src.fga.abac_engine", "ABAC Engine"),
-        ("src.fga.opa_integration", "OPA Integration"),
-        ("src.fga.authorization_cache", "Authorization Cache"),
-
+        ("subzero.services.authorization.manager", "FGA Authorization Engine"),
+        ("subzero.services.authorization.rebac", "ReBAC Engine"),
+        ("subzero.services.authorization.abac", "ABAC Engine"),
+        ("subzero.services.authorization.opa", "OPA Integration"),
+        ("subzero.services.authorization.cache", "Authorization Cache"),
         # Security
-        ("src.security.owasp_llm_mitigations", "OWASP LLM Mitigations"),
-        ("src.security.advanced_threat_detection", "Advanced Threat Detection"),
-        ("src.security.ispm", "ISPM (Identity Security Posture Management)"),
-        ("src.security.rate_limiter", "Rate Limiter"),
-        ("src.security.health_monitor", "Health Monitor"),
-        ("src.security.audit_trail", "Audit Trail"),
-        ("src.security.graceful_degradation", "Graceful Degradation"),
-
+        ("subzero.services.security.threat_detection", "Advanced Threat Detection"),
+        ("subzero.services.security.ispm", "ISPM (Identity Security Posture Management)"),
+        ("subzero.services.security.rate_limiter", "Rate Limiter"),
+        ("subzero.services.security.health", "Health Monitor"),
+        ("subzero.services.security.audit", "Audit Trail"),
+        ("subzero.services.security.degradation", "Graceful Degradation"),
         # MCP
-        ("src.mcp.dynamic_capability_discovery", "MCP Dynamic Capability Discovery"),
-        ("src.mcp.custom_transports", "MCP Custom Transports"),
-
-        # Performance
-        ("src.performance.vectorized_operations", "Vectorized Operations"),
-
+        ("subzero.services.mcp.capabilities", "MCP Dynamic Capability Discovery"),
+        ("subzero.services.mcp.transports", "MCP Custom Transports"),
         # Integration
-        ("src.integration.unified_gateway", "Unified Zero Trust Gateway"),
+        ("subzero.subzeroapp", "Unified Zero Trust Gateway"),
+        # Config
+        ("subzero.config.defaults", "Configuration Management"),
     ]
 
     passed = 0
@@ -128,17 +119,17 @@ def main():
         print(f"{YELLOW}Verifying key classes...{RESET}\n")
 
         key_classes = [
-            ("src.integration.unified_gateway", "UnifiedZeroTrustGateway"),
-            ("src.performance.functional_event_orchestrator", "FunctionalEventOrchestrator"),
-            ("src.auth.resilient_auth_service", "ResilientAuthService"),
-            ("src.security.advanced_threat_detection", "SignupFraudDetector"),
-            ("src.security.advanced_threat_detection", "AccountTakeoverDetector"),
-            ("src.security.advanced_threat_detection", "MFAAbuseDetector"),
-            ("src.auth.xaa_protocol", "XAAProtocol"),
-            ("src.auth.app_registry", "ApplicationRegistry"),
-            ("src.mcp.custom_transports", "WebSocketTransport"),
-            ("src.mcp.custom_transports", "SSETransport"),
-            ("src.mcp.custom_transports", "HTTPLongPollingTransport"),
+            ("subzero.subzeroapp", "UnifiedZeroTrustGateway"),
+            ("subzero.services.orchestrator.event_loop", "FunctionalEventOrchestrator"),
+            ("subzero.services.auth.resilient", "ResilientAuthService"),
+            ("subzero.services.security.threat_detection", "SignupFraudDetector"),
+            ("subzero.services.security.threat_detection", "AccountTakeoverDetector"),
+            ("subzero.services.security.threat_detection", "MFAAbuseDetector"),
+            ("subzero.services.auth.xaa", "XAAProtocol"),
+            ("subzero.services.auth.registry", "ApplicationRegistry"),
+            ("subzero.services.mcp.transports", "WebSocketTransport"),
+            ("subzero.services.mcp.transports", "SSETransport"),
+            ("subzero.services.mcp.transports", "HTTPLongPollingTransport"),
         ]
 
         all_classes_found = True
@@ -165,7 +156,8 @@ def main():
         print(f"{BLUE}Integration Architecture{RESET}")
         print(f"{BLUE}{'='*70}{RESET}\n")
 
-        print("""
+        print(
+            """
         ┌──────────────────────────────────────────────────────────┐
         │         Unified Zero Trust API Gateway                   │
         │                                                          │
@@ -191,7 +183,8 @@ def main():
         │  │   - Circuit breakers                               │ │
         │  └────────────────────────────────────────────────────┘ │
         └──────────────────────────────────────────────────────────┘
-        """)
+        """
+        )
 
         print(f"{GREEN}✅ Integration verification PASSED{RESET}")
         print(f"{GREEN}   All components are seamlessly integrated!{RESET}\n")
