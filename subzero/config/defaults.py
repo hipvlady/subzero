@@ -9,16 +9,16 @@ from typing import Optional, List
 
 class Settings(BaseSettings):
     # Auth0 Configuration
-    AUTH0_DOMAIN: str
-    AUTH0_CLIENT_ID: str
+    AUTH0_DOMAIN: str = "example.auth0.com"
+    AUTH0_CLIENT_ID: str = "test_client_id"
     AUTH0_CLIENT_SECRET: Optional[str] = None
-    AUTH0_AUDIENCE: str
+    AUTH0_AUDIENCE: str = "https://api.example.com"
     AUTH0_MANAGEMENT_API_TOKEN: Optional[str] = None
 
     # Auth0 FGA Configuration
-    FGA_STORE_ID: str
-    FGA_CLIENT_ID: str
-    FGA_CLIENT_SECRET: str
+    FGA_STORE_ID: str = "test_store_id"
+    FGA_CLIENT_ID: str = "test_fga_client_id"
+    FGA_CLIENT_SECRET: str = "test_fga_secret"
     FGA_API_URL: str = "https://api.us1.fga.dev"
 
     # Auth0 Token Vault Configuration
