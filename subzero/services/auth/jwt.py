@@ -3,21 +3,15 @@ Copyright (c) 2025 Subzero Contributors
 SPDX-License-Identifier: MIT
 """
 
-import asyncio
 import time
-import json
-import hashlib
-from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
-from datetime import datetime, timedelta
 
-import numpy as np
-from numba import jit
 import aiohttp
 import jwt
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+import numpy as np
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa
+from numba import jit
 
 
 @dataclass
@@ -72,7 +66,7 @@ class PrivateKeyJWTAuthenticator:
         test_bytes = np.array([1, 2, 3], dtype=np.uint8)
         _ = TokenCache._hash_user_id(test_bytes)
 
-    async def authenticate(self, user_id: str, scopes: str = "openid profile email") -> Dict:
+    async def authenticate(self, user_id: str, scopes: str = "openid profile email") -> dict:
         """
         Perform Private Key JWT authentication
         Returns access token with sub-10ms latency for cached tokens
@@ -127,7 +121,7 @@ class PrivateKeyJWTAuthenticator:
 
         return str(uuid.uuid4())
 
-    async def _exchange_assertion_for_token(self, assertion: str, scopes: str) -> Dict:
+    async def _exchange_assertion_for_token(self, assertion: str, scopes: str) -> dict:
         """
         Exchange JWT assertion for access token
         """
@@ -142,7 +136,7 @@ class PrivateKeyJWTAuthenticator:
 
             return await response.json()
 
-    def _get_cached_token(self, user_id: str) -> Optional[Dict]:
+    def _get_cached_token(self, user_id: str) -> dict | None:
         """
         Retrieve token from cache if valid
         """
@@ -160,7 +154,7 @@ class PrivateKeyJWTAuthenticator:
 
         return token_data
 
-    def _cache_token(self, user_id: str, token_data: Dict):
+    def _cache_token(self, user_id: str, token_data: dict):
         """
         Cache token with expiration tracking
         """
@@ -183,11 +177,10 @@ class PrivateKeyJWTAuthenticator:
         """Clean up resources"""
         await self.session.close()
 
-    def get_public_key_jwk(self) -> Dict:
+    def get_public_key_jwk(self) -> dict:
         """
         Get public key in JWK format for Auth0 configuration
         """
-        from cryptography.hazmat.primitives import serialization
         import base64
 
         public_numbers = self.public_key.public_numbers()

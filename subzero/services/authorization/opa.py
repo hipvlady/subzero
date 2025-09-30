@@ -14,11 +14,11 @@ Features:
 """
 
 import asyncio
-import time
 import json
-from typing import Dict, List, Optional, Any, Set, Tuple
+import time
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 import aiohttp
 
@@ -43,7 +43,7 @@ class PolicyDocument:
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     enabled: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -53,10 +53,10 @@ class PolicyDecision:
     allowed: bool
     policy_id: str
     decision_id: str
-    reasons: List[str] = field(default_factory=list)
-    matched_rules: List[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
+    matched_rules: list[str] = field(default_factory=list)
     evaluation_time_ms: float = 0.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class OPAClient:
@@ -85,7 +85,7 @@ class OPAClient:
         self.query_count = 0
         self.query_errors = 0
 
-    async def query(self, input_data: Dict, policy_path: Optional[str] = None) -> PolicyDecision:
+    async def query(self, input_data: dict, policy_path: str | None = None) -> PolicyDecision:
         """
         Query OPA for authorization decision
 
@@ -194,7 +194,7 @@ class OPAClient:
             print(f"Failed to delete policy: {e}")
             return False
 
-    async def get_policy(self, policy_id: str) -> Optional[str]:
+    async def get_policy(self, policy_id: str) -> str | None:
         """
         Get policy from OPA server
 
@@ -255,14 +255,14 @@ class PolicyEngine:
         self.enable_caching = enable_caching
 
         # Policy registry
-        self.policies: Dict[str, PolicyDocument] = {}
+        self.policies: dict[str, PolicyDocument] = {}
 
         # Decision cache
-        self.decision_cache: Dict[str, Tuple[PolicyDecision, float]] = {}
+        self.decision_cache: dict[str, tuple[PolicyDecision, float]] = {}
         self.cache_ttl = 60  # 1 minute
 
         # Built-in policy templates
-        self.policy_templates: Dict[str, str] = {}
+        self.policy_templates: dict[str, str] = {}
         self._init_policy_templates()
 
         # Metrics
@@ -425,7 +425,7 @@ reasons[msg] {
 
         return True
 
-    async def evaluate(self, policy_id: str, input_data: Dict) -> PolicyDecision:
+    async def evaluate(self, policy_id: str, input_data: dict) -> PolicyDecision:
         """
         Evaluate policy against input data
 
@@ -458,7 +458,7 @@ reasons[msg] {
 
         return decision
 
-    async def evaluate_batch(self, evaluations: List[Tuple[str, Dict]]) -> List[PolicyDecision]:
+    async def evaluate_batch(self, evaluations: list[tuple[str, dict]]) -> list[PolicyDecision]:
         """
         Evaluate multiple policies in batch
 
@@ -473,8 +473,8 @@ reasons[msg] {
         return await asyncio.gather(*tasks)
 
     def create_from_template(
-        self, template_name: str, policy_id: str, customizations: Optional[Dict] = None
-    ) -> Optional[PolicyDocument]:
+        self, template_name: str, policy_id: str, customizations: dict | None = None
+    ) -> PolicyDocument | None:
         """
         Create policy from template
 
@@ -504,7 +504,7 @@ reasons[msg] {
             metadata={"template": template_name},
         )
 
-    def _generate_cache_key(self, policy_id: str, input_data: Dict) -> str:
+    def _generate_cache_key(self, policy_id: str, input_data: dict) -> str:
         """Generate cache key for decision"""
         import hashlib
 
@@ -512,7 +512,7 @@ reasons[msg] {
         combined = f"{policy_id}:{data_str}"
         return hashlib.sha256(combined.encode()).hexdigest()
 
-    async def test_policy(self, policy_id: str, test_cases: List[Dict]) -> Dict:
+    async def test_policy(self, policy_id: str, test_cases: list[dict]) -> dict:
         """
         Test policy with multiple test cases
 
@@ -550,7 +550,7 @@ reasons[msg] {
 
         return results
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get policy engine metrics"""
         cache_hit_rate = (self.cache_hits / max(self.total_evaluations, 1)) * 100
 

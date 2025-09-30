@@ -15,12 +15,10 @@ Features:
 
 import asyncio
 import time
-from typing import Dict, Optional, List
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
-from collections import deque
 
-import aiohttp
 import httpx
 
 from subzero.config.defaults import settings
@@ -51,8 +49,8 @@ class HealthCheck:
     status: ServiceStatus
     response_time_ms: float
     timestamp: float = field(default_factory=time.time)
-    error: Optional[str] = None
-    metadata: Dict = field(default_factory=dict)
+    error: str | None = None
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -68,7 +66,7 @@ class CircuitBreaker:
     failure_count: int = 0
     success_count: int = 0
     last_failure_time: float = 0
-    opened_at: Optional[float] = None
+    opened_at: float | None = None
 
     def record_success(self):
         """Record successful request"""
@@ -143,7 +141,7 @@ class Auth0HealthMonitor:
         }
 
         # Health check history
-        self.health_history: Dict[str, deque] = {service: deque(maxlen=100) for service in self.circuit_breakers.keys()}
+        self.health_history: dict[str, deque] = {service: deque(maxlen=100) for service in self.circuit_breakers.keys()}
 
         # HTTP clients
         self.http_client = httpx.AsyncClient(timeout=10.0)
@@ -158,7 +156,7 @@ class Auth0HealthMonitor:
         self.alerts_sent = 0
 
         # Background monitoring task
-        self._monitoring_task: Optional[asyncio.Task] = None
+        self._monitoring_task: asyncio.Task | None = None
 
     async def start_monitoring(self):
         """Start continuous health monitoring"""
@@ -190,7 +188,7 @@ class Auth0HealthMonitor:
                 print(f"❌ Monitoring error: {e}")
                 await asyncio.sleep(self.check_interval)
 
-    async def check_all_services(self) -> Dict[str, HealthCheck]:
+    async def check_all_services(self) -> dict[str, HealthCheck]:
         """Check health of all Auth0 services"""
         results = {}
 
@@ -206,7 +204,7 @@ class Auth0HealthMonitor:
 
         service_names = ["authentication", "fga", "management_api", "token_vault"]
 
-        for service_name, result in zip(service_names, health_results):
+        for service_name, result in zip(service_names, health_results, strict=False):
             if isinstance(result, Exception):
                 result = HealthCheck(
                     service=service_name, status=ServiceStatus.UNHEALTHY, response_time_ms=0, error=str(result)
@@ -415,7 +413,7 @@ class Auth0HealthMonitor:
         if all_unhealthy:
             await self._send_alert(service_name, recent_checks)
 
-    async def _send_alert(self, service_name: str, failed_checks: List[HealthCheck]):
+    async def _send_alert(self, service_name: str, failed_checks: list[HealthCheck]):
         """Send alert notification"""
         self.alerts_sent += 1
 
@@ -436,7 +434,7 @@ class Auth0HealthMonitor:
 
         print(f"🚨 ALERT: {service_name} - {len(failed_checks)} consecutive failures")
 
-    def get_service_health(self, service_name: str) -> Optional[HealthCheck]:
+    def get_service_health(self, service_name: str) -> HealthCheck | None:
         """Get latest health check for service"""
         history = self.health_history.get(service_name)
 
@@ -445,7 +443,7 @@ class Auth0HealthMonitor:
 
         return history[-1]
 
-    def get_circuit_breaker_status(self, service_name: str) -> Optional[Dict]:
+    def get_circuit_breaker_status(self, service_name: str) -> dict | None:
         """Get circuit breaker status for service"""
         breaker = self.circuit_breakers.get(service_name)
 
@@ -469,7 +467,7 @@ class Auth0HealthMonitor:
 
         return breaker.state == CircuitState.OPEN
 
-    def get_dashboard_data(self) -> Dict:
+    def get_dashboard_data(self) -> dict:
         """Get data for health dashboard"""
         services_health = {}
 

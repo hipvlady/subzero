@@ -13,16 +13,14 @@ Features:
 - Real-time risk assessment
 """
 
-import time
-import math
-from typing import Dict, List, Optional, Any, Callable, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, time as dt_time
 import ipaddress
-
-import numpy as np
-from numba import jit
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from datetime import time as dt_time
+from enum import Enum
+from typing import Any
 
 
 class AttributeType(str, Enum):
@@ -82,7 +80,7 @@ class Policy:
     policy_id: str
     description: str
     effect: Effect
-    conditions: List[Condition] = field(default_factory=list)
+    conditions: list[Condition] = field(default_factory=list)
     priority: int = 0  # Higher priority policies evaluated first
 
 
@@ -96,13 +94,13 @@ class AuthorizationContext:
     # User attributes
     user_id: str
     user_role: str
-    user_department: Optional[str] = None
+    user_department: str | None = None
     user_clearance_level: int = 0
 
     # Resource attributes
     resource_type: str = ""
     resource_id: str = ""
-    resource_owner: Optional[str] = None
+    resource_owner: str | None = None
     resource_sensitivity: str = "public"  # public, internal, confidential, secret
 
     # Action attributes
@@ -110,13 +108,13 @@ class AuthorizationContext:
 
     # Environment/context attributes
     timestamp: float = field(default_factory=time.time)
-    source_ip: Optional[str] = None
-    location: Optional[str] = None
-    device_type: Optional[str] = None
+    source_ip: str | None = None
+    location: str | None = None
+    device_type: str | None = None
     risk_score: float = 0.0  # 0.0 = low risk, 1.0 = high risk
 
     # Additional custom attributes
-    custom_attributes: Dict[str, Any] = field(default_factory=dict)
+    custom_attributes: dict[str, Any] = field(default_factory=dict)
 
 
 class RiskCalculator:
@@ -175,7 +173,7 @@ class RiskCalculator:
 
         return min(1.0, max(0.0, total_risk))
 
-    def _calculate_ip_risk(self, ip_address: Optional[str]) -> float:
+    def _calculate_ip_risk(self, ip_address: str | None) -> float:
         """Calculate risk based on IP address trust"""
         if not ip_address:
             return 0.5  # Unknown = medium risk
@@ -205,7 +203,7 @@ class RiskCalculator:
         # After hours = higher risk
         return 0.6
 
-    def _calculate_location_risk(self, location: Optional[str]) -> float:
+    def _calculate_location_risk(self, location: str | None) -> float:
         """Calculate risk based on location"""
         if not location:
             return 0.3  # Unknown location = medium-low risk
@@ -218,7 +216,7 @@ class RiskCalculator:
 
         return 0.7  # Unknown location = higher risk
 
-    def _calculate_device_risk(self, device_type: Optional[str]) -> float:
+    def _calculate_device_risk(self, device_type: str | None) -> float:
         """Calculate risk based on device type"""
         if not device_type:
             return 0.3
@@ -239,13 +237,13 @@ class ABACEngine:
 
     def __init__(self):
         # Policy registry
-        self.policies: Dict[str, Policy] = {}
+        self.policies: dict[str, Policy] = {}
 
         # Risk calculator
         self.risk_calculator = RiskCalculator()
 
         # Attribute providers (functions to fetch attributes)
-        self.attribute_providers: Dict[AttributeType, Dict[str, Callable]] = {
+        self.attribute_providers: dict[AttributeType, dict[str, Callable]] = {
             AttributeType.USER: {},
             AttributeType.RESOURCE: {},
             AttributeType.ACTION: {},
@@ -253,7 +251,7 @@ class ABACEngine:
         }
 
         # Decision cache
-        self.decision_cache: Dict[str, Tuple[Effect, float]] = {}
+        self.decision_cache: dict[str, tuple[Effect, float]] = {}
         self.cache_ttl = 60  # 1 minute
 
         # Metrics
@@ -331,7 +329,7 @@ class ABACEngine:
             return True
         return False
 
-    async def evaluate(self, context: AuthorizationContext) -> Tuple[Effect, Dict]:
+    async def evaluate(self, context: AuthorizationContext) -> tuple[Effect, dict]:
         """
         Evaluate authorization decision based on context
 
@@ -519,7 +517,7 @@ class ABACEngine:
         key_string = "|".join(key_parts)
         return hashlib.sha256(key_string.encode()).hexdigest()
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get ABAC engine metrics"""
         allow_rate = (self.allow_count / max(self.decisions_count, 1)) * 100
         deny_rate = (self.deny_count / max(self.decisions_count, 1)) * 100

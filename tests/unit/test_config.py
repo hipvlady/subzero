@@ -5,7 +5,6 @@ SPDX-License-Identifier: MIT
 Unit tests for configuration settings.
 """
 
-import pytest
 from subzero.config.defaults import Settings
 
 

@@ -3,15 +3,15 @@ Integration Tests for Unified Zero Trust Gateway
 Tests seamless integration of all components through the orchestrator
 """
 
-import pytest
 import asyncio
 import time
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import patch
 
-from src.integration.unified_gateway import UnifiedZeroTrustGateway, GatewayMetrics
-from src.performance.functional_event_orchestrator import RequestPriority
-from src.auth.token_vault_integration import TokenProvider
+import pytest
 from src.auth.auth0_integration import Auth0Configuration
+from src.auth.token_vault_integration import TokenProvider
+from src.integration.unified_gateway import UnifiedZeroTrustGateway
+from src.performance.functional_event_orchestrator import RequestPriority
 
 
 @pytest.fixture
@@ -117,7 +117,7 @@ class TestAuthenticationIntegration:
         user_id = "rate_limited_user"
 
         # First requests should succeed
-        for i in range(5):
+        for _i in range(5):
             result = await gateway.authenticate_request(user_id=user_id, priority=RequestPriority.HIGH)
             # May fail due to missing Auth0, but shouldn't be rate limited
             if not result["success"] and "rate_limit_exceeded" in result.get("error", ""):
@@ -266,14 +266,14 @@ class TestPerformanceIntegration:
             tasks.append(task)
 
         # Wait for all requests
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000
 
         # Calculate throughput
         throughput = (num_requests / elapsed_ms) * 1000  # RPS
 
-        print(f"\n📊 Performance Test Results:")
+        print("\n📊 Performance Test Results:")
         print(f"   Total Requests: {num_requests}")
         print(f"   Total Time: {elapsed_ms:.2f}ms")
         print(f"   Throughput: {throughput:.2f} RPS")
@@ -294,13 +294,13 @@ class TestPerformanceIntegration:
             tasks.append(task)
 
         # Execute concurrently
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         # Check orchestrator metrics
         metrics = gateway.orchestrator.get_metrics()
 
         # Should have coalesced some requests
-        print(f"\n🔄 Coalescing Test:")
+        print("\n🔄 Coalescing Test:")
         print(f"   Total requests: {metrics.total_requests}")
         print(f"   Coalesced requests: {metrics.coalesced_requests}")
 
@@ -332,7 +332,7 @@ class TestMetricsAndMonitoring:
         assert "avg_latency_ms" in metrics["orchestrator"]
         assert "throughput_rps" in metrics["orchestrator"]
 
-        print(f"\n📊 Gateway Metrics:")
+        print("\n📊 Gateway Metrics:")
         print(f"   Total Requests: {metrics['gateway']['total_requests']}")
         print(f"   Threats Blocked: {metrics['gateway']['threats_blocked']}")
         print(f"   Orchestrator RPS: {metrics['orchestrator']['throughput_rps']:.2f}")

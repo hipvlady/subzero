@@ -13,25 +13,17 @@ This module provides:
 - DPoP (Demonstration of Proof-of-Possession) support
 """
 
-import asyncio
-import secrets
-import hashlib
 import base64
+import hashlib
+import secrets
 import time
-import json
-from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from enum import Enum
 
-import numpy as np
-from numba import jit
 import aiohttp
 import jwt
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.backends import default_backend
-from pydantic import BaseModel, validator
+import numpy as np
+from numba import jit
 
 
 class GrantType(Enum):
@@ -84,8 +76,8 @@ class OAuthToken:
     access_token: str
     token_type: str = "Bearer"
     expires_in: int = 3600
-    refresh_token: Optional[str] = None
-    id_token: Optional[str] = None
+    refresh_token: str | None = None
+    id_token: str | None = None
     scope: str = ""
     issued_at: float = field(default_factory=time.time)
 
@@ -167,15 +159,15 @@ class OAuth2PKCEServer:
     Integrates with Auth0 as the backend authorization server
     """
 
-    def __init__(self, auth0_domain: str, client_id: str, client_secret: Optional[str] = None):
+    def __init__(self, auth0_domain: str, client_id: str, client_secret: str | None = None):
         self.auth0_domain = auth0_domain
         self.client_id = client_id
         self.client_secret = client_secret
 
         # In-memory storage (replace with Redis/PostgreSQL for production)
-        self.authorization_codes: Dict[str, AuthorizationCode] = {}
-        self.pkce_challenges: Dict[str, PKCEChallenge] = {}
-        self.refresh_tokens: Dict[str, Dict] = {}
+        self.authorization_codes: dict[str, AuthorizationCode] = {}
+        self.pkce_challenges: dict[str, PKCEChallenge] = {}
+        self.refresh_tokens: dict[str, dict] = {}
 
         # Security counters for monitoring
         self.failed_verifications = 0
@@ -190,8 +182,8 @@ class OAuth2PKCEServer:
         self.session = aiohttp.ClientSession(connector=connector, timeout=timeout)
 
     async def create_authorization_request(
-        self, client_id: str, redirect_uri: str, scope: str = "openid profile email", state: Optional[str] = None
-    ) -> Dict:
+        self, client_id: str, redirect_uri: str, scope: str = "openid profile email", state: str | None = None
+    ) -> dict:
         """
         Step 1: Create authorization request with PKCE challenge
 
@@ -234,7 +226,7 @@ class OAuth2PKCEServer:
 
     async def handle_authorization_callback(
         self, authorization_code: str, client_id: str, redirect_uri: str, code_verifier: str
-    ) -> Dict:
+    ) -> dict:
         """
         Step 2: Handle authorization callback and exchange code for token
         Validates PKCE code_verifier against stored challenge
@@ -283,7 +275,7 @@ class OAuth2PKCEServer:
             latency_ms = (time.perf_counter() - start_time) * 1000
             return {"error": "invalid_grant", "error_description": str(e), "processing_time_ms": latency_ms}
 
-    async def _exchange_code_with_auth0(self, code: str, client_id: str, redirect_uri: str, code_verifier: str) -> Dict:
+    async def _exchange_code_with_auth0(self, code: str, client_id: str, redirect_uri: str, code_verifier: str) -> dict:
         """
         Exchange authorization code with Auth0 token endpoint
         """
@@ -310,7 +302,7 @@ class OAuth2PKCEServer:
             self.successful_authentications += 1
             return await response.json()
 
-    async def _generate_tokens(self, user_id: str, client_id: str, scope: str) -> Dict:
+    async def _generate_tokens(self, user_id: str, client_id: str, scope: str) -> dict:
         """
         Generate OAuth 2.1 tokens with refresh token rotation
         """
@@ -359,7 +351,7 @@ class OAuth2PKCEServer:
 
         return token
 
-    async def refresh_access_token(self, refresh_token: str, client_id: str) -> Dict:
+    async def refresh_access_token(self, refresh_token: str, client_id: str) -> dict:
         """
         Refresh access token with refresh token rotation
         Implements single-use refresh tokens for security
@@ -417,13 +409,13 @@ class OAuth2PKCEServer:
         for token in tokens_to_remove:
             del self.refresh_tokens[token]
 
-    async def introspect_token(self, token: str) -> Dict:
+    async def introspect_token(self, token: str) -> dict:
         """
         Token introspection endpoint (RFC 7662)
         """
         try:
             # Decode without verification first to get claims
-            unverified_claims = jwt.decode(token, options={"verify_signature": False})
+            jwt.decode(token, options={"verify_signature": False})
 
             # Verify signature
             verified_claims = jwt.decode(
@@ -446,7 +438,7 @@ class OAuth2PKCEServer:
         except Exception:
             return {"active": False}
 
-    async def get_metrics(self) -> Dict:
+    async def get_metrics(self) -> dict:
         """
         Get OAuth 2.1 PKCE metrics
         """

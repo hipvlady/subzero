@@ -11,21 +11,16 @@ SDK Versions:
 - PyJWT: 2.8.0+
 """
 
-import asyncio
-import time
-import json
 import base64
-from typing import Dict, List, Optional, Any
+import time
 from dataclasses import dataclass
 
 import httpx
 import jwt
-from auth0.authentication import GetToken
 from auth0.management import Auth0
-from openfga_sdk import ClientConfiguration, OpenFgaClient as FgaClient
-from openfga_sdk import CheckRequest, WriteRequest, TupleKey, WriteRequestWrites, ReadRequest
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from openfga_sdk import CheckRequest, ClientConfiguration, ReadRequest, TupleKey, WriteRequest, WriteRequestWrites
+from openfga_sdk import OpenFgaClient as FgaClient
 
 
 @dataclass
@@ -35,18 +30,18 @@ class Auth0Configuration:
     # Core Auth0 settings
     domain: str
     client_id: str
-    client_secret: Optional[str] = None
+    client_secret: str | None = None
     audience: str = ""
 
     # Management API
-    management_api_token: Optional[str] = None
+    management_api_token: str | None = None
 
     # FGA settings
     fga_store_id: str = ""
     fga_client_id: str = ""
     fga_client_secret: str = ""
     fga_api_url: str = "https://api.us1.fga.dev"
-    fga_model_id: Optional[str] = None
+    fga_model_id: str | None = None
 
     # Token Vault settings (Auth for GenAI)
     token_vault_endpoint: str = ""
@@ -98,7 +93,7 @@ class Auth0IntegrationManager:
     # Private Key JWT Implementation
     # =============================
 
-    async def authenticate_with_private_key_jwt(self, user_id: str, scopes: str = "openid profile email") -> Dict:
+    async def authenticate_with_private_key_jwt(self, user_id: str, scopes: str = "openid profile email") -> dict:
         """
         Authenticate using Private Key JWT (RFC 7523)
         Eliminates shared secrets completely
@@ -172,7 +167,7 @@ class Auth0IntegrationManager:
 
         return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii").rstrip("=")
 
-    def get_public_key_for_auth0_config(self) -> Dict:
+    def get_public_key_for_auth0_config(self) -> dict:
         """
         Generate public key in JWKS format for Auth0 configuration
         Required for Auth0 to validate Private Key JWT signatures
@@ -202,7 +197,7 @@ class Auth0IntegrationManager:
     # Auth0 FGA Integration Methods
     # ================================
 
-    async def check_fga_permission(self, user_id: str, object_type: str, object_id: str, relation: str) -> Dict:
+    async def check_fga_permission(self, user_id: str, object_type: str, object_id: str, relation: str) -> dict:
         """
         Check permission using Auth0 FGA
 
@@ -229,7 +224,7 @@ class Auth0IntegrationManager:
         except Exception as e:
             return {"allowed": False, "error": str(e), "error_type": type(e).__name__}
 
-    async def write_fga_relationship(self, user_id: str, object_type: str, object_id: str, relation: str) -> Dict:
+    async def write_fga_relationship(self, user_id: str, object_type: str, object_id: str, relation: str) -> dict:
         """
         Write relationship tuple to Auth0 FGA
 
@@ -255,7 +250,7 @@ class Auth0IntegrationManager:
         except Exception as e:
             return {"success": False, "error": str(e), "error_type": type(e).__name__}
 
-    async def read_fga_relationships(self, user_filter: str = None, object_filter: str = None) -> Dict:
+    async def read_fga_relationships(self, user_filter: str = None, object_filter: str = None) -> dict:
         """
         Read relationship tuples from Auth0 FGA
 
@@ -300,7 +295,7 @@ class Auth0IntegrationManager:
     # Auth0 Management API Integration
     # ===================================
 
-    async def get_user_profile(self, user_id: str) -> Dict:
+    async def get_user_profile(self, user_id: str) -> dict:
         """
         Get user profile from Auth0 Management API
 
@@ -333,7 +328,7 @@ class Auth0IntegrationManager:
         except Exception as e:
             return {"success": False, "error": str(e), "user": None}
 
-    async def update_user_metadata(self, user_id: str, app_metadata: Dict = None, user_metadata: Dict = None) -> Dict:
+    async def update_user_metadata(self, user_id: str, app_metadata: dict = None, user_metadata: dict = None) -> dict:
         """
         Update user metadata via Auth0 Management API
 
@@ -362,7 +357,7 @@ class Auth0IntegrationManager:
     # Token Vault Integration (Auth for GenAI)
     # ===============================
 
-    async def store_ai_credentials_in_vault(self, ai_agent_id: str, credentials: Dict, expires_in: int = 3600) -> Dict:
+    async def store_ai_credentials_in_vault(self, ai_agent_id: str, credentials: dict, expires_in: int = 3600) -> dict:
         """
         Store AI agent credentials in Auth0 Token Vault
         Part of Auth for GenAI product (April 2025 launch)
@@ -399,7 +394,7 @@ class Auth0IntegrationManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def retrieve_ai_credentials_from_vault(self, ai_agent_id: str, credential_id: str) -> Dict:
+    async def retrieve_ai_credentials_from_vault(self, ai_agent_id: str, credential_id: str) -> dict:
         """
         Retrieve AI agent credentials from Auth0 Token Vault
 
@@ -434,8 +429,8 @@ class Auth0IntegrationManager:
     # ================================
 
     async def create_human_in_the_loop_workflow(
-        self, user_id: str, resource_id: str, requested_permission: str, approver_ids: List[str]
-    ) -> Dict:
+        self, user_id: str, resource_id: str, requested_permission: str, approver_ids: list[str]
+    ) -> dict:
         """
         Create human-in-the-loop approval workflow
         Integrates with Auth0 Actions and FGA
@@ -473,7 +468,7 @@ class Auth0IntegrationManager:
         except Exception as e:
             return {"success": False, "error": str(e), "workflow_id": None}
 
-    async def approve_workflow(self, approver_id: str, workflow_id: str, decision: bool) -> Dict:
+    async def approve_workflow(self, approver_id: str, workflow_id: str, decision: bool) -> dict:
         """
         Process approval decision for human-in-the-loop workflow
         """
@@ -503,7 +498,7 @@ class Auth0IntegrationManager:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def get_integration_health_status(self) -> Dict:
+    async def get_integration_health_status(self) -> dict:
         """
         Comprehensive health check for all Auth0 integrations
         """
@@ -585,7 +580,7 @@ def create_auth0_config_from_env() -> Auth0Configuration:
     )
 
 
-async def setup_auth0_application_for_private_key_jwt(config: Auth0Configuration, public_key_jwks: Dict) -> Dict:
+async def setup_auth0_application_for_private_key_jwt(config: Auth0Configuration, public_key_jwks: dict) -> dict:
     """
     Setup Auth0 application for Private Key JWT authentication
     This would typically be done via Auth0 Management API or Dashboard

@@ -1,14 +1,13 @@
 from pydantic_settings import BaseSettings
-from typing import Optional, List
 
 
 class Settings(BaseSettings):
     # Auth0 Configuration
     AUTH0_DOMAIN: str
     AUTH0_CLIENT_ID: str
-    AUTH0_CLIENT_SECRET: Optional[str] = None
+    AUTH0_CLIENT_SECRET: str | None = None
     AUTH0_AUDIENCE: str
-    AUTH0_MANAGEMENT_API_TOKEN: Optional[str] = None
+    AUTH0_MANAGEMENT_API_TOKEN: str | None = None
 
     # Auth0 FGA Configuration
     FGA_STORE_ID: str
@@ -20,19 +19,19 @@ class Settings(BaseSettings):
     TOKEN_VAULT_ENABLED: bool = True
     TOKEN_VAULT_API_URL: str = "https://api.auth0.com/token-vault/v1"
     TOKEN_VAULT_NAMESPACE: str = "ztag"
-    TOKEN_VAULT_ENCRYPTION_KEY: Optional[str] = None
-    TOKEN_VAULT_SUPPORTED_PROVIDERS: List[str] = ["google", "microsoft", "slack", "github", "box", "salesforce"]
+    TOKEN_VAULT_ENCRYPTION_KEY: str | None = None
+    TOKEN_VAULT_SUPPORTED_PROVIDERS: list[str] = ["google", "microsoft", "slack", "github", "box", "salesforce"]
 
     # Okta Configuration (for XAA support)
-    OKTA_DOMAIN: Optional[str] = None
-    OKTA_CLIENT_ID: Optional[str] = None
-    OKTA_CLIENT_SECRET: Optional[str] = None
-    OKTA_API_TOKEN: Optional[str] = None
+    OKTA_DOMAIN: str | None = None
+    OKTA_CLIENT_ID: str | None = None
+    OKTA_CLIENT_SECRET: str | None = None
+    OKTA_API_TOKEN: str | None = None
 
     # Cross App Access (XAA) Configuration
     XAA_ENABLED: bool = True
     XAA_ISSUER: str = "https://api.ztag.dev"
-    XAA_SIGNING_KEY: Optional[str] = None
+    XAA_SIGNING_KEY: str | None = None
     XAA_TOKEN_TTL: int = 3600  # 1 hour
     XAA_MAX_DELEGATION_DEPTH: int = 3
 
@@ -40,7 +39,7 @@ class Settings(BaseSettings):
     ISPM_ENABLED: bool = True
     ISPM_RISK_THRESHOLD: float = 0.7
     ISPM_AUTO_REMEDIATION: bool = True
-    ISPM_ALERT_WEBHOOK: Optional[str] = None
+    ISPM_ALERT_WEBHOOK: str | None = None
 
     # Threat Detection
     THREAT_DETECTION_ENABLED: bool = True
@@ -51,14 +50,14 @@ class Settings(BaseSettings):
 
     # Universal Directory for Agents
     AGENT_DIRECTORY_ENABLED: bool = True
-    AGENT_REGISTRY_URL: Optional[str] = None
+    AGENT_REGISTRY_URL: str | None = None
     AGENT_MAX_REGISTRATIONS: int = 10000
 
     # Compliance
     GDPR_COMPLIANCE_MODE: bool = False
     HIPAA_COMPLIANCE_MODE: bool = False
     AUDIT_LOG_RETENTION_DAYS: int = 90
-    AUDIT_LOG_ENDPOINT: Optional[str] = None
+    AUDIT_LOG_ENDPOINT: str | None = None
 
     # Performance Settings
     CACHE_CAPACITY: int = 10000
@@ -98,7 +97,7 @@ class Settings(BaseSettings):
 
     # Redis Configuration
     REDIS_URL: str = "redis://localhost:6379"
-    REDIS_PASSWORD: Optional[str] = None
+    REDIS_PASSWORD: str | None = None
 
     class Config:
         env_file = ".env"

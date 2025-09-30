@@ -15,25 +15,22 @@ Components:
 - Performance (Orchestrator, Caching, JIT Compilation)
 """
 
-import asyncio
 import time
-from typing import Dict, Optional, Any, List
 from dataclasses import dataclass
 
-from subzero.services.orchestrator.event_loop import FunctionalEventOrchestrator, RequestContext, RequestPriority
-from subzero.services.auth.resilient import ResilientAuthService
-from subzero.services.auth.manager import Auth0Configuration
-from subzero.services.auth.vault import Auth0TokenVault, TokenProvider
-from subzero.services.auth.xaa import XAAProtocol, AccessScope
-from subzero.services.auth.registry import ApplicationRegistry, AppType
-from subzero.services.security.rate_limiter import DistributedRateLimiter, LimitType
-from subzero.services.security.threat_detection import SignupFraudDetector, AccountTakeoverDetector, MFAAbuseDetector
-from subzero.services.security.ispm import ISPMEngine
-from subzero.services.security.audit import AuditTrailService, AuditEvent, AuditEventType, AuditSeverity
-from subzero.services.authorization.rebac import ReBACEngine
-from subzero.services.authorization.abac import ABACEngine
-from subzero.services.mcp.transports import TransportFactory, TransportType
 from subzero.config.defaults import settings
+from subzero.services.auth.manager import Auth0Configuration
+from subzero.services.auth.registry import ApplicationRegistry
+from subzero.services.auth.resilient import ResilientAuthService
+from subzero.services.auth.vault import Auth0TokenVault, TokenProvider
+from subzero.services.auth.xaa import XAAProtocol
+from subzero.services.authorization.abac import ABACEngine
+from subzero.services.authorization.rebac import ReBACEngine
+from subzero.services.orchestrator.event_loop import FunctionalEventOrchestrator, RequestContext, RequestPriority
+from subzero.services.security.audit import AuditEvent, AuditEventType, AuditSeverity, AuditTrailService
+from subzero.services.security.ispm import ISPMEngine
+from subzero.services.security.rate_limiter import DistributedRateLimiter, LimitType
+from subzero.services.security.threat_detection import AccountTakeoverDetector, MFAAbuseDetector, SignupFraudDetector
 
 
 @dataclass
@@ -55,7 +52,7 @@ class UnifiedZeroTrustGateway:
     Single entry point that orchestrates all security and performance components
     """
 
-    def __init__(self, config: Optional[Auth0Configuration] = None):
+    def __init__(self, config: Auth0Configuration | None = None):
         """
         Initialize unified gateway
 
@@ -175,11 +172,11 @@ class UnifiedZeroTrustGateway:
     async def authenticate_request(
         self,
         user_id: str,
-        token: Optional[str] = None,
+        token: str | None = None,
         scopes: str = "openid profile email",
-        source_ip: Optional[str] = None,
+        source_ip: str | None = None,
         priority: RequestPriority = RequestPriority.HIGH,
-    ) -> Dict:
+    ) -> dict:
         """
         Authenticate request through orchestrator
 
@@ -227,9 +224,9 @@ class UnifiedZeroTrustGateway:
         resource_type: str,
         resource_id: str,
         relation: str,
-        context_data: Optional[Dict] = None,
+        context_data: dict | None = None,
         priority: RequestPriority = RequestPriority.HIGH,
-    ) -> Dict:
+    ) -> dict:
         """
         Authorize request through orchestrator
 
@@ -266,8 +263,8 @@ class UnifiedZeroTrustGateway:
         return result
 
     async def detect_threat(
-        self, threat_type: str, data: Dict, priority: RequestPriority = RequestPriority.CRITICAL
-    ) -> Dict:
+        self, threat_type: str, data: dict, priority: RequestPriority = RequestPriority.CRITICAL
+    ) -> dict:
         """
         Detect security threats through orchestrator
 
@@ -297,9 +294,9 @@ class UnifiedZeroTrustGateway:
         self,
         agent_id: str,
         provider: TokenProvider,
-        token_data: Dict,
+        token_data: dict,
         priority: RequestPriority = RequestPriority.NORMAL,
-    ) -> Dict:
+    ) -> dict:
         """
         Store AI agent credentials in Token Vault
 
@@ -325,8 +322,8 @@ class UnifiedZeroTrustGateway:
         return result
 
     async def establish_xaa_channel(
-        self, agent_id: str, app_id: str, scopes: List[str], priority: RequestPriority = RequestPriority.NORMAL
-    ) -> Dict:
+        self, agent_id: str, app_id: str, scopes: list[str], priority: RequestPriority = RequestPriority.NORMAL
+    ) -> dict:
         """
         Establish XAA bidirectional channel
 
@@ -355,7 +352,7 @@ class UnifiedZeroTrustGateway:
     # Operation Handlers (called by orchestrator)
     # ==========================================
 
-    async def _handle_authentication(self, context: RequestContext) -> Dict:
+    async def _handle_authentication(self, context: RequestContext) -> dict:
         """Handle authentication operation"""
         start_time = time.perf_counter()
 
@@ -394,7 +391,7 @@ class UnifiedZeroTrustGateway:
             "latency_ms": latency_ms,
         }
 
-    async def _handle_authorization(self, context: RequestContext) -> Dict:
+    async def _handle_authorization(self, context: RequestContext) -> dict:
         """Handle authorization operation"""
         start_time = time.perf_counter()
 
@@ -442,7 +439,7 @@ class UnifiedZeroTrustGateway:
 
         return {"allowed": allowed, "source": source, "latency_ms": latency_ms}
 
-    async def _handle_threat_detection(self, context: RequestContext) -> Dict:
+    async def _handle_threat_detection(self, context: RequestContext) -> dict:
         """Handle threat detection operation"""
         payload = context.payload
         threat_type = payload["threat_type"]
@@ -494,7 +491,7 @@ class UnifiedZeroTrustGateway:
             ],
         }
 
-    async def _handle_token_storage(self, context: RequestContext) -> Dict:
+    async def _handle_token_storage(self, context: RequestContext) -> dict:
         """Handle token storage operation"""
         payload = context.payload
 
@@ -509,7 +506,7 @@ class UnifiedZeroTrustGateway:
             "provider": payload["provider"],
         }
 
-    async def _handle_token_retrieval(self, context: RequestContext) -> Dict:
+    async def _handle_token_retrieval(self, context: RequestContext) -> dict:
         """Handle token retrieval operation"""
         payload = context.payload
 
@@ -519,7 +516,7 @@ class UnifiedZeroTrustGateway:
 
         return {"success": token_data is not None, "token_data": token_data}
 
-    async def _handle_xaa_channel(self, context: RequestContext) -> Dict:
+    async def _handle_xaa_channel(self, context: RequestContext) -> dict:
         """Handle XAA channel establishment"""
         payload = context.payload
 
@@ -529,7 +526,7 @@ class UnifiedZeroTrustGateway:
 
         return result
 
-    async def _handle_xaa_delegation(self, context: RequestContext) -> Dict:
+    async def _handle_xaa_delegation(self, context: RequestContext) -> dict:
         """Handle XAA token delegation"""
         payload = context.payload
 
@@ -542,7 +539,7 @@ class UnifiedZeroTrustGateway:
 
         return {"success": True, "delegated_token": delegated_token}
 
-    async def _handle_risk_assessment(self, context: RequestContext) -> Dict:
+    async def _handle_risk_assessment(self, context: RequestContext) -> dict:
         """Handle ISPM risk assessment"""
         payload = context.payload
 
@@ -565,7 +562,7 @@ class UnifiedZeroTrustGateway:
     # Monitoring & Metrics
     # ==========================================
 
-    async def get_gateway_metrics(self) -> Dict:
+    async def get_gateway_metrics(self) -> dict:
         """Get comprehensive gateway metrics"""
         # Get orchestrator metrics
         orchestrator_metrics = self.orchestrator.get_metrics()

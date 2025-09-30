@@ -12,21 +12,20 @@ Performance Targets:
 """
 
 import asyncio
-import time
 import hashlib
-from typing import Dict, List, Optional, Set, Tuple, Any
+import json
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-import json
+from typing import Any
 
-import numpy as np
-from numba import jit, types
-from numba.typed import Dict as NumbaDict, List as NumbaList
-import aiohttp
 import httpx
-from openfga_sdk import ClientConfiguration, OpenFgaClient as FgaClient, CheckRequest
+import numpy as np
 import redis.asyncio as redis
-from prometheus_client import Counter, Histogram, Gauge
+from numba import jit
+from openfga_sdk import CheckRequest, ClientConfiguration
+from openfga_sdk import OpenFgaClient as FgaClient
+from prometheus_client import Counter, Histogram
 
 # Performance metrics
 AUTH_CHECKS_TOTAL = Counter("fga_authorization_checks_total", "Total authorization checks")
@@ -105,7 +104,7 @@ class VectorisedPermissionCache:
         self.misses = 0
         self.evictions = 0
 
-    def get_permissions(self, permission_hash: int) -> Optional[np.ndarray]:
+    def get_permissions(self, permission_hash: int) -> np.ndarray | None:
         """Retrieve permission vector from cache"""
         current_time = time.time()
 
@@ -159,7 +158,7 @@ class FineGrainedAuthorizationEngine:
     - Real-time permission updates
     """
 
-    def __init__(self, fga_config: Dict, redis_url: str = "redis://localhost:6379"):
+    def __init__(self, fga_config: dict, redis_url: str = "redis://localhost:6379"):
         self.fga_config = fga_config
 
         # Initialize Auth0 FGA client
@@ -184,14 +183,14 @@ class FineGrainedAuthorizationEngine:
         )
 
         # Async workflow queue
-        self.pending_approvals: Dict[str, Dict] = {}
+        self.pending_approvals: dict[str, dict] = {}
 
         # Performance tracking
         self.metrics = {"total_checks": 0, "cache_hits": 0, "fga_requests": 0, "avg_latency_ms": []}
 
     async def check_permission(
         self, user_id: str, resource_type: str, resource_id: str, permission: PermissionType
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         High-performance permission check with multi-level caching
 
@@ -271,7 +270,7 @@ class FineGrainedAuthorizationEngine:
         finally:
             AUTH_CHECK_DURATION.observe(time.perf_counter() - start_time)
 
-    async def batch_check_permissions(self, checks: List[Dict]) -> List[Dict]:
+    async def batch_check_permissions(self, checks: list[dict]) -> list[dict]:
         """
         Vectorised batch permission checking for optimal performance
         Processes multiple permissions simultaneously
@@ -310,7 +309,7 @@ class FineGrainedAuthorizationEngine:
         return all_results
 
     async def create_human_approval_workflow(
-        self, user_id: str, resource_id: str, permission: PermissionType, approver_ids: List[str]
+        self, user_id: str, resource_id: str, permission: PermissionType, approver_ids: list[str]
     ) -> str:
         """
         Create async human-in-the-loop approval workflow
@@ -342,7 +341,7 @@ class FineGrainedAuthorizationEngine:
         print(f"🔄 Created approval workflow {workflow_id} for {user_id}")
         return workflow_id
 
-    async def approve_workflow(self, workflow_id: str, approver_id: str, decision: bool) -> Dict:
+    async def approve_workflow(self, workflow_id: str, approver_id: str, decision: bool) -> dict:
         """Process approval decision and update permissions"""
         workflow_data = await self._get_workflow(workflow_id)
 
@@ -373,7 +372,7 @@ class FineGrainedAuthorizationEngine:
         key_data = f"{user_id}:{resource_type}:{resource_id}"
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
-    async def _check_local_cache(self, cache_key: str, permission: PermissionType) -> Optional[bool]:
+    async def _check_local_cache(self, cache_key: str, permission: PermissionType) -> bool | None:
         """Check vectorised local permission cache"""
         try:
             # Convert cache key to hash for NumPy lookup
@@ -397,7 +396,7 @@ class FineGrainedAuthorizationEngine:
 
         return None
 
-    async def _check_redis_cache(self, cache_key: str, permission: PermissionType) -> Optional[Dict]:
+    async def _check_redis_cache(self, cache_key: str, permission: PermissionType) -> dict | None:
         """Check distributed Redis permission cache"""
         try:
             cached_data = await self.redis_client.get(f"perm:{cache_key}")
@@ -418,7 +417,7 @@ class FineGrainedAuthorizationEngine:
 
     async def _check_fga_permission(
         self, user_id: str, resource_type: str, resource_id: str, permission: PermissionType
-    ) -> Dict:
+    ) -> dict:
         """Query Auth0 FGA for permission decision"""
         try:
             # Create FGA check request
@@ -445,7 +444,7 @@ class FineGrainedAuthorizationEngine:
             print(f"FGA check error: {e}")
             return {"allowed": False, "error": str(e)}
 
-    async def _batch_check_fga(self, checks: List[Dict]) -> List[Dict]:
+    async def _batch_check_fga(self, checks: list[dict]) -> list[dict]:
         """Execute batch FGA permission checks"""
         results = []
 
@@ -461,7 +460,7 @@ class FineGrainedAuthorizationEngine:
         fga_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Combine with original check data
-        for check, result in zip(checks, fga_results):
+        for check, result in zip(checks, fga_results, strict=False):
             if isinstance(result, Exception):
                 check_result = {"allowed": False, "error": str(result)}
             else:
@@ -471,7 +470,7 @@ class FineGrainedAuthorizationEngine:
 
         return results
 
-    async def _cache_permission_result(self, cache_key: str, result: Dict, ttl: float = 300.0):
+    async def _cache_permission_result(self, cache_key: str, result: dict, ttl: float = 300.0):
         """Cache permission result in both local and distributed caches"""
         try:
             # Cache in Redis
@@ -509,13 +508,13 @@ class FineGrainedAuthorizationEngine:
         }
         return permission_map.get(permission, 0)
 
-    async def _notify_approvers(self, workflow_data: Dict):
+    async def _notify_approvers(self, workflow_data: dict):
         """Send notifications to approvers (placeholder for integration)"""
         # Integration point for notification systems
         # (email, Slack, Teams, etc.)
         print(f"📧 Notifying approvers for workflow {workflow_data['id']}")
 
-    async def _get_workflow(self, workflow_id: str) -> Optional[Dict]:
+    async def _get_workflow(self, workflow_id: str) -> dict | None:
         """Retrieve workflow data from Redis"""
         try:
             workflow_data = await self.redis_client.get(f"workflow:{workflow_id}")
@@ -536,7 +535,7 @@ class FineGrainedAuthorizationEngine:
         except Exception as e:
             print(f"Permission grant error: {e}")
 
-    async def get_performance_metrics(self) -> Dict:
+    async def get_performance_metrics(self) -> dict:
         """Get comprehensive performance metrics"""
         avg_latency = sum(self.metrics["avg_latency_ms"]) / max(len(self.metrics["avg_latency_ms"]), 1)
 

@@ -4,25 +4,24 @@ Target: 10,000+ RPS with <10ms P99 latency
 """
 
 import asyncio
-import time
-import numpy as np
-import pytest
-import tempfile
+import os
 import statistics
-from unittest.mock import AsyncMock, patch
-from typing import List, Dict
 
 # Import modules to test
 import sys
-import os
+import time
+from unittest.mock import AsyncMock, patch
+
+import numpy as np
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src"))
 
-from auth.eddsa_key_manager import EdDSAKeyManager
 from auth.cuckoo_cache import CuckooCache
-from auth.simd_operations import SIMDHasher, simd_xxhash64, benchmark_hash_functions
-from auth.token_pool import TokenPool, AdaptiveTokenPool
+from auth.eddsa_key_manager import EdDSAKeyManager
 from auth.high_performance_auth import HighPerformanceAuthenticator
+from auth.simd_operations import SIMDHasher, benchmark_hash_functions, simd_xxhash64
+from auth.token_pool import AdaptiveTokenPool, TokenPool
 
 
 class TestEdDSAPerformance:
@@ -34,7 +33,7 @@ class TestEdDSAPerformance:
 
         for _ in range(10):
             start = time.perf_counter()
-            manager = EdDSAKeyManager()
+            EdDSAKeyManager()
             elapsed = time.perf_counter() - start
             times.append(elapsed * 1000)  # Convert to ms
 
@@ -58,7 +57,7 @@ class TestEdDSAPerformance:
         times = []
         for _ in range(1000):
             start = time.perf_counter()
-            token = manager.sign_jwt(payload)
+            manager.sign_jwt(payload)
             elapsed = time.perf_counter() - start
             times.append(elapsed * 1000)  # Convert to ms
 
@@ -173,7 +172,7 @@ class TestCuckooCachePerformance:
         start = time.perf_counter()
         for i, hash_val in enumerate(collision_hashes):
             cache.insert(hash_val, {"data": f"item_{i}"})
-        elapsed = time.perf_counter() - start
+        time.perf_counter() - start
 
         # Verify all items can be retrieved
         retrieved = 0
@@ -238,7 +237,7 @@ class TestSIMDOperations:
         times = []
         for _ in range(10000):
             start = time.perf_counter()
-            hash_val = simd_xxhash64(test_data)
+            simd_xxhash64(test_data)
             elapsed = time.perf_counter() - start
             times.append(elapsed * 1_000_000_000)  # Convert to ns
 
@@ -366,7 +365,7 @@ class TestEndToEndPerformance:
             assert rps > 1000, f"RPS {rps:.0f} below 1000 target"
             assert p50 < 1.0, f"P50 latency {p50:.2f}ms exceeds 1ms target for cached requests"
 
-            print(f"✅ End-to-end performance:")
+            print("✅ End-to-end performance:")
             print(f"   P50: {p50:.2f}ms, P95: {p95:.2f}ms, P99: {p99:.2f}ms")
             print(f"   RPS: {rps:.0f}")
 
@@ -387,7 +386,7 @@ class TestEndToEndPerformance:
                 auth0_domain="test.auth0.com", client_id="test_client", cache_capacity=1000
             )
 
-            async def auth_worker(worker_id: int, num_requests: int) -> List[float]:
+            async def auth_worker(worker_id: int, num_requests: int) -> list[float]:
                 """Worker function for concurrent testing"""
                 latencies = []
                 for i in range(num_requests):
@@ -442,7 +441,7 @@ class TestMemoryEfficiency:
         assert stats["occupancy"] > 0.2, f"Low occupancy: {stats['occupancy']:.2%}"
 
         # Should have good hit ratio in testing
-        hit_ratio = stats["hit_ratio"]
+        stats["hit_ratio"]
         print(f"✅ Cache stats: {stats}")
 
     def test_token_pool_memory_efficiency(self):

@@ -23,30 +23,27 @@ Expected Performance Gains:
 """
 
 import asyncio
-import time
-import pytest
 import logging
+import multiprocessing as mp
+import os
 import random
 import statistics
-import hashlib
-from typing import Dict, List, Any
-import re
-from concurrent.futures import as_completed
-import threading
-import multiprocessing as mp
-
 import sys
-import os
+import threading
+import time
+from concurrent.futures import as_completed
+from typing import Any
+
+import pytest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.performance.cpu_bound_multiprocessing import (
     CPUBoundProcessor,
-    get_cpu_processor,
-    _generate_coalescing_key_sync,
     _calculate_analytics_sync,
-    _match_patterns_sync,
     _cleanup_cache_sync,
+    _generate_coalescing_key_sync,
+    _match_patterns_sync,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,7 +55,7 @@ class CPUBoundBenchmark:
     def __init__(self):
         self.cpu_processor = CPUBoundProcessor(max_workers=min(8, mp.cpu_count()))
 
-    def generate_test_contexts(self, count: int, duplicate_ratio: float = 0.3) -> List[Dict[str, Any]]:
+    def generate_test_contexts(self, count: int, duplicate_ratio: float = 0.3) -> list[dict[str, Any]]:
         """Generate test contexts for coalescing benchmarks"""
         contexts = []
 
@@ -97,7 +94,7 @@ class CPUBoundBenchmark:
         random.shuffle(contexts)
         return contexts
 
-    def generate_test_metrics(self, count: int) -> List[Dict[str, Any]]:
+    def generate_test_metrics(self, count: int) -> list[dict[str, Any]]:
         """Generate test metrics data for analytics benchmarks"""
         current_time = time.time()
         metrics = []
@@ -158,7 +155,7 @@ class CPUBoundBenchmark:
             "Database connection established",
         ]
 
-        for i in range(text_count):
+        for _i in range(text_count):
             # Mix suspicious and normal content
             if random.random() < 0.3:  # 30% suspicious content
                 text_content = random.choice(suspicious_phrases)
@@ -172,7 +169,7 @@ class CPUBoundBenchmark:
 
         return texts, patterns
 
-    def generate_test_cache(self, entry_count: int, expired_ratio: float = 0.3) -> Dict[str, Dict]:
+    def generate_test_cache(self, entry_count: int, expired_ratio: float = 0.3) -> dict[str, dict]:
         """Generate test cache entries for cleanup benchmarks"""
         current_time = time.time()
         cache_entries = {}
@@ -250,9 +247,9 @@ async def test_coalescing_key_generation_benchmark():
     large_batch_results = [r for size, r in results.items() if size >= 100]
     avg_speedup = statistics.mean([r["speedup"] for r in large_batch_results])
 
-    print(f"\n📊 Coalescing Key Generation Results:")
+    print("\n📊 Coalescing Key Generation Results:")
     print(f"  Average speedup (batches ≥100): {avg_speedup:.1f}x")
-    print(f"  Target: ≥1.6x (60% faster)")
+    print("  Target: ≥1.6x (60% faster)")
     print(f"  Status: {'✅ PASSED' if avg_speedup >= 1.6 else '❌ FAILED'}")
 
     # Assert performance targets
@@ -311,9 +308,9 @@ async def test_analytics_processing_benchmark():
     large_dataset_results = [r for size, r in results.items() if size >= 200]
     avg_speedup = statistics.mean([r["speedup"] for r in large_dataset_results])
 
-    print(f"\n📊 Analytics Processing Results:")
+    print("\n📊 Analytics Processing Results:")
     print(f"  Average speedup (datasets ≥200): {avg_speedup:.1f}x")
-    print(f"  Target: ≥4.0x")
+    print("  Target: ≥4.0x")
     print(f"  Status: {'✅ PASSED' if avg_speedup >= 4.0 else '❌ FAILED'}")
 
     # Assert performance targets
@@ -350,7 +347,7 @@ async def test_pattern_matching_benchmark():
         assert len(sequential_results) == len(multiprocessing_results) == text_count
 
         # Check result structure consistency
-        for seq_result, mp_result in zip(sequential_results[:5], multiprocessing_results[:5]):
+        for seq_result, mp_result in zip(sequential_results[:5], multiprocessing_results[:5], strict=False):
             assert seq_result["text_length"] == mp_result["text_length"]
             assert seq_result["patterns_tested"] == mp_result["patterns_tested"]
 
@@ -375,9 +372,9 @@ async def test_pattern_matching_benchmark():
     large_workload_results = [r for count, r in results.items() if count >= 100]
     avg_speedup = statistics.mean([r["speedup"] for r in large_workload_results])
 
-    print(f"\n📊 Pattern Matching Results:")
+    print("\n📊 Pattern Matching Results:")
     print(f"  Average speedup (≥100 texts): {avg_speedup:.1f}x")
-    print(f"  Target: ≥8.0x")
+    print("  Target: ≥8.0x")
     print(f"  Status: {'✅ PASSED' if avg_speedup >= 8.0 else '❌ FAILED'}")
 
     # Assert performance targets
@@ -434,9 +431,9 @@ async def test_cache_cleanup_benchmark():
     large_cache_results = [r for size, r in results.items() if size >= 1000]
     avg_speedup = statistics.mean([r["speedup"] for r in large_cache_results])
 
-    print(f"\n📊 Cache Cleanup Results:")
+    print("\n📊 Cache Cleanup Results:")
     print(f"  Average speedup (≥1000 entries): {avg_speedup:.1f}x")
-    print(f"  Target: ≥3.0x")
+    print("  Target: ≥3.0x")
     print(f"  Status: {'✅ PASSED' if avg_speedup >= 3.0 else '❌ FAILED'}")
 
     # Assert performance targets
@@ -491,24 +488,24 @@ async def test_gil_contention_demonstration():
     # Test I/O-bound operations (asyncio efficiency)
     start_time = time.perf_counter()
     io_tasks = [io_bound_task(0.1) for _ in range(num_tasks)]
-    asyncio_results = await asyncio.gather(*io_tasks)
+    await asyncio.gather(*io_tasks)
     asyncio_time = time.perf_counter() - start_time
 
     # Calculate improvements
     cpu_speedup = threading_time / multiprocessing_time
 
-    print(f"\n🔬 GIL Contention Analysis:")
+    print("\n🔬 GIL Contention Analysis:")
     print(f"  CPU-bound Threading: {threading_time:.3f}s (GIL-constrained)")
     print(f"  CPU-bound Multiprocessing: {multiprocessing_time:.3f}s (GIL-free)")
     print(f"  CPU Speedup: {cpu_speedup:.1f}x")
     print(f"  I/O-bound AsyncIO: {asyncio_time:.3f}s (GIL-efficient)")
-    print(f"  ")
-    print(f"  ✅ CPU-bound operations benefit from multiprocessing")
-    print(f"  ✅ I/O-bound operations efficient with asyncio")
+    print("  ")
+    print("  ✅ CPU-bound operations benefit from multiprocessing")
+    print("  ✅ I/O-bound operations efficient with asyncio")
 
     # Validate our understanding of GIL impact
-    assert cpu_speedup >= 2.0, f"Multiprocessing should show significant speedup for CPU-bound tasks"
-    assert asyncio_time < 0.5, f"AsyncIO should be efficient for I/O-bound tasks"
+    assert cpu_speedup >= 2.0, "Multiprocessing should show significant speedup for CPU-bound tasks"
+    assert asyncio_time < 0.5, "AsyncIO should be efficient for I/O-bound tasks"
 
 
 @pytest.mark.asyncio
@@ -538,11 +535,11 @@ async def test_comprehensive_performance_comparison():
         contexts = benchmark.generate_test_contexts(scenario["contexts"], duplicate_ratio=0.3)
 
         start_time = time.perf_counter()
-        seq_keys = [_generate_coalescing_key_sync(ctx) for ctx in contexts]
+        [_generate_coalescing_key_sync(ctx) for ctx in contexts]
         seq_coalescing_time = time.perf_counter() - start_time
 
         start_time = time.perf_counter()
-        mp_keys = await benchmark.cpu_processor.process_batch_coalescing_keys(contexts)
+        await benchmark.cpu_processor.process_batch_coalescing_keys(contexts)
         mp_coalescing_time = time.perf_counter() - start_time
 
         coalescing_speedup = seq_coalescing_time / mp_coalescing_time if mp_coalescing_time > 0 else 1.0
@@ -552,11 +549,11 @@ async def test_comprehensive_performance_comparison():
         metrics_data = benchmark.generate_test_metrics(scenario["metrics"])
 
         start_time = time.perf_counter()
-        seq_analytics = _calculate_analytics_sync(metrics_data)
+        _calculate_analytics_sync(metrics_data)
         seq_analytics_time = time.perf_counter() - start_time
 
         start_time = time.perf_counter()
-        mp_analytics = await benchmark.cpu_processor.process_analytics_batch(metrics_data)
+        await benchmark.cpu_processor.process_analytics_batch(metrics_data)
         mp_analytics_time = time.perf_counter() - start_time
 
         analytics_speedup = seq_analytics_time / mp_analytics_time if mp_analytics_time > 0 else 1.0
@@ -566,11 +563,11 @@ async def test_comprehensive_performance_comparison():
         texts, patterns = benchmark.generate_test_texts_and_patterns(scenario["texts"], 8)
 
         start_time = time.perf_counter()
-        seq_patterns = [_match_patterns_sync(text, patterns) for text in texts]
+        [_match_patterns_sync(text, patterns) for text in texts]
         seq_pattern_time = time.perf_counter() - start_time
 
         start_time = time.perf_counter()
-        mp_patterns = await benchmark.cpu_processor.process_pattern_matching_batch(texts, patterns)
+        await benchmark.cpu_processor.process_pattern_matching_batch(texts, patterns)
         mp_pattern_time = time.perf_counter() - start_time
 
         pattern_speedup = seq_pattern_time / mp_pattern_time if mp_pattern_time > 0 else 1.0
@@ -594,23 +591,23 @@ async def test_comprehensive_performance_comparison():
     avg_pattern_speedup = statistics.mean([r["pattern_speedup"] for r in results_summary])
     avg_overall_speedup = statistics.mean([r["overall_speedup"] for r in results_summary])
 
-    print(f"\n📊 Overall CPU-Bound Multiprocessing Performance Summary:")
+    print("\n📊 Overall CPU-Bound Multiprocessing Performance Summary:")
     print(f"  Average coalescing speedup: {avg_coalescing_speedup:.1f}x (Target: ≥1.6x)")
     print(f"  Average analytics speedup: {avg_analytics_speedup:.1f}x (Target: ≥4.0x)")
     print(f"  Average pattern speedup: {avg_pattern_speedup:.1f}x (Target: ≥8.0x)")
     print(f"  Average overall speedup: {avg_overall_speedup:.1f}x")
-    print(f"  ")
-    print(f"  🎯 GIL Bypass Strategy:")
-    print(f"  ✅ CPU-bound operations → multiprocessing (significant speedups)")
-    print(f"  ✅ I/O-bound operations → asyncio (GIL-efficient)")
-    print(f"  ✅ Mixed workloads → intelligent routing")
+    print("  ")
+    print("  🎯 GIL Bypass Strategy:")
+    print("  ✅ CPU-bound operations → multiprocessing (significant speedups)")
+    print("  ✅ I/O-bound operations → asyncio (GIL-efficient)")
+    print("  ✅ Mixed workloads → intelligent routing")
 
     # Verify overall performance targets
-    assert avg_overall_speedup >= 2.0, f"Expected ≥2.0x average speedup across all operations"
-    assert avg_coalescing_speedup >= 1.3, f"Expected ≥1.3x coalescing speedup"
-    assert avg_analytics_speedup >= 2.0, f"Expected ≥2.0x analytics speedup"
+    assert avg_overall_speedup >= 2.0, "Expected ≥2.0x average speedup across all operations"
+    assert avg_coalescing_speedup >= 1.3, "Expected ≥1.3x coalescing speedup"
+    assert avg_analytics_speedup >= 2.0, "Expected ≥2.0x analytics speedup"
 
-    print(f"\n✅ All CPU-bound multiprocessing optimizations validated!")
+    print("\n✅ All CPU-bound multiprocessing optimizations validated!")
 
 
 if __name__ == "__main__":
@@ -630,11 +627,11 @@ if __name__ == "__main__":
         print("\n🎯 Running comprehensive performance comparison...")
         await test_comprehensive_performance_comparison()
 
-        print(f"\n🎉 All CPU-bound multiprocessing benchmarks completed successfully!")
-        print(f"Key takeaways:")
-        print(f"  • Python's GIL limits CPU-bound threading performance")
-        print(f"  • Multiprocessing bypasses GIL for significant speedups")
-        print(f"  • AsyncIO remains optimal for I/O-bound operations")
-        print(f"  • Intelligent routing maximizes overall system performance")
+        print("\n🎉 All CPU-bound multiprocessing benchmarks completed successfully!")
+        print("Key takeaways:")
+        print("  • Python's GIL limits CPU-bound threading performance")
+        print("  • Multiprocessing bypasses GIL for significant speedups")
+        print("  • AsyncIO remains optimal for I/O-bound operations")
+        print("  • Intelligent routing maximizes overall system performance")
 
     asyncio.run(main())

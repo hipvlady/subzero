@@ -15,14 +15,9 @@ Features:
 
 import asyncio
 import time
-from typing import Dict, List, Optional, Set, Tuple, FrozenSet
+from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from collections import defaultdict, deque
-
-import numpy as np
-from numba import jit
-import aiohttp
 
 
 class RelationType(str, Enum):
@@ -48,7 +43,7 @@ class Permission(str, Enum):
 
 
 @dataclass(frozen=True)
-class Tuple:
+class AuthzTuple:
     """
     Authorization tuple representing a relationship
     Format: <object>#<relation>@<subject>
@@ -65,7 +60,7 @@ class Tuple:
         return f"{self.object_type}:{self.object_id}#{self.relation}@{self.subject_type}:{self.subject_id}"
 
     @classmethod
-    def from_string(cls, tuple_str: str) -> "Tuple":
+    def from_string(cls, tuple_str: str) -> "AuthzTuple":
         """Parse tuple from string format"""
         parts = tuple_str.split("#")
         if len(parts) != 2:
@@ -93,13 +88,13 @@ class RelationDefinition:
 
     name: str
     # Direct relationships this relation depends on
-    direct_relations: Set[str] = field(default_factory=set)
+    direct_relations: set[str] = field(default_factory=set)
     # Computed from other relations (union)
-    union_relations: Set[str] = field(default_factory=set)
+    union_relations: set[str] = field(default_factory=set)
     # Computed from intersection
-    intersection_relations: Set[str] = field(default_factory=set)
+    intersection_relations: set[str] = field(default_factory=set)
     # Inherited from parent objects
-    parent_relation: Optional[str] = None
+    parent_relation: str | None = None
 
 
 @dataclass
@@ -110,7 +105,7 @@ class ObjectType:
     """
 
     name: str
-    relations: Dict[str, RelationDefinition] = field(default_factory=dict)
+    relations: dict[str, RelationDefinition] = field(default_factory=dict)
 
 
 class ReBACEngine:
@@ -119,7 +114,7 @@ class ReBACEngine:
     Implements Zanzibar-style authorization with graph traversal
     """
 
-    def __init__(self, auth0_fga_store_id: Optional[str] = None):
+    def __init__(self, auth0_fga_store_id: str | None = None):
         """
         Initialize ReBAC engine
 
@@ -129,17 +124,17 @@ class ReBACEngine:
         self.auth0_fga_store_id = auth0_fga_store_id
 
         # In-memory relationship graph (use Auth0 FGA in production)
-        self.tuples: Set[Tuple] = set()
+        self.tuples: set[AuthzTuple] = set()
 
         # Object type definitions
-        self.object_types: Dict[str, ObjectType] = {}
+        self.object_types: dict[str, ObjectType] = {}
 
         # Indices for fast lookups
-        self.by_object: Dict[str, Set[Tuple]] = defaultdict(set)
-        self.by_subject: Dict[str, Set[Tuple]] = defaultdict(set)
+        self.by_object: dict[str, set[AuthzTuple]] = defaultdict(set)
+        self.by_subject: dict[str, set[AuthzTuple]] = defaultdict(set)
 
         # Permission cache: (object, relation, subject) -> result
-        self.cache: Dict[FrozenSet, Tuple[bool, float]] = {}
+        self.cache: dict[frozenset, tuple[bool, float]] = {}
         self.cache_ttl = 300  # 5 minutes
 
         # Performance metrics
@@ -204,7 +199,7 @@ class ReBACEngine:
 
         self.object_types["team"] = team_type
 
-    def write_tuple(self, tuple_obj: Tuple) -> bool:
+    def write_tuple(self, tuple_obj: AuthzTuple) -> bool:
         """
         Write an authorization tuple (create relationship)
 
@@ -230,7 +225,7 @@ class ReBACEngine:
 
         return True
 
-    def delete_tuple(self, tuple_obj: Tuple) -> bool:
+    def delete_tuple(self, tuple_obj: AuthzTuple) -> bool:
         """
         Delete an authorization tuple (remove relationship)
 
@@ -317,7 +312,7 @@ class ReBACEngine:
         Internal relation checking with graph traversal
         """
         # Check direct relationship
-        direct_tuple = Tuple(object_type, object_id, relation, subject_type, subject_id)
+        direct_tuple = AuthzTuple(object_type, object_id, relation, subject_type, subject_id)
         if direct_tuple in self.tuples:
             return True
 
@@ -375,7 +370,7 @@ class ReBACEngine:
 
         return False
 
-    async def expand(self, object_type: str, object_id: str, relation: str) -> List[Tuple]:
+    async def expand(self, object_type: str, object_id: str, relation: str) -> list[AuthzTuple]:
         """
         Expand all subjects that have a relation to an object
         Useful for "who can access this resource?" queries
@@ -409,7 +404,7 @@ class ReBACEngine:
 
         return expanded
 
-    async def list_objects(self, object_type: str, relation: str, subject_type: str, subject_id: str) -> List[str]:
+    async def list_objects(self, object_type: str, relation: str, subject_type: str, subject_id: str) -> list[str]:
         """
         List all objects of a type that subject has relation to
         Useful for "what can this user access?" queries
@@ -464,7 +459,7 @@ class ReBACEngine:
         for key in keys_to_remove:
             del self.cache[key]
 
-    async def batch_check(self, checks: List[Dict]) -> List[bool]:
+    async def batch_check(self, checks: list[dict]) -> list[bool]:
         """
         Batch multiple authorization checks for performance
 
@@ -483,7 +478,7 @@ class ReBACEngine:
 
         return await asyncio.gather(*tasks)
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """
         Get ReBAC engine performance metrics
         """

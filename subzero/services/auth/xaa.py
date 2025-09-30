@@ -14,20 +14,15 @@ Features:
 - Just-in-time access provisioning
 """
 
-import asyncio
-import time
 import secrets
-import hashlib
-from typing import Dict, List, Optional, Set, Tuple
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime, timedelta
 
-import jwt
 import aiohttp
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
+import jwt
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from subzero.config.defaults import settings
 
@@ -57,7 +52,7 @@ class DelegationChain:
     chain_id: str
     initiator: str  # Original user/agent
     current_holder: str  # Current token holder
-    delegation_path: List[str] = field(default_factory=list)
+    delegation_path: list[str] = field(default_factory=list)
     depth: int = 0
     max_depth: int = 3
     created_at: float = field(default_factory=time.time)
@@ -72,11 +67,11 @@ class XAAToken:
     token_type: XAATokenType
     subject: str  # Agent or user ID
     audience: str  # Target application
-    scopes: Set[str]
-    delegation_chain: Optional[DelegationChain] = None
+    scopes: set[str]
+    delegation_chain: DelegationChain | None = None
     issued_at: float = field(default_factory=time.time)
     expires_at: float = field(default_factory=lambda: time.time() + 3600)
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -86,11 +81,11 @@ class AppRegistration:
     app_id: str
     app_name: str
     app_type: str  # "web", "service", "agent"
-    allowed_scopes: Set[str]
+    allowed_scopes: set[str]
     allowed_delegations: bool = True
     max_delegation_depth: int = 3
-    callback_urls: List[str] = field(default_factory=list)
-    public_key: Optional[str] = None  # For token verification
+    callback_urls: list[str] = field(default_factory=list)
+    public_key: str | None = None  # For token verification
 
 
 class XAAProtocol:
@@ -99,7 +94,7 @@ class XAAProtocol:
     Enables secure multi-hop agent-to-app communication
     """
 
-    def __init__(self, issuer: str, signing_key: Optional[rsa.RSAPrivateKey] = None, okta_domain: Optional[str] = None):
+    def __init__(self, issuer: str, signing_key: rsa.RSAPrivateKey | None = None, okta_domain: str | None = None):
         """
         Initialize XAA protocol
 
@@ -120,13 +115,13 @@ class XAAProtocol:
         self.public_key = self.signing_key.public_key()
 
         # Application registry
-        self.applications: Dict[str, AppRegistration] = {}
+        self.applications: dict[str, AppRegistration] = {}
 
         # Active tokens
-        self.active_tokens: Dict[str, XAAToken] = {}
+        self.active_tokens: dict[str, XAAToken] = {}
 
         # Delegation chains
-        self.delegation_chains: Dict[str, DelegationChain] = {}
+        self.delegation_chains: dict[str, DelegationChain] = {}
 
         # HTTP session for Okta integration
         if self.okta_domain:
@@ -145,8 +140,8 @@ class XAAProtocol:
         app_id: str,
         app_name: str,
         app_type: str,
-        allowed_scopes: Set[str],
-        callback_urls: Optional[List[str]] = None,
+        allowed_scopes: set[str],
+        callback_urls: list[str] | None = None,
         max_delegation_depth: int = 3,
     ) -> AppRegistration:
         """
@@ -182,10 +177,10 @@ class XAAProtocol:
         self,
         subject: str,
         audience: str,
-        scopes: Set[str],
+        scopes: set[str],
         token_type: XAATokenType = XAATokenType.PRIMARY,
         expires_in: int = 3600,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> str:
         """
         Issue XAA token
@@ -264,7 +259,7 @@ class XAAProtocol:
         original_token: str,
         target_subject: str,
         target_audience: str,
-        scopes: Optional[Set[str]] = None,
+        scopes: set[str] | None = None,
         expires_in: int = 1800,
     ) -> str:
         """
@@ -290,7 +285,7 @@ class XAAProtocol:
             )
         except jwt.InvalidTokenError as e:
             self.rejected_count += 1
-            raise ValueError(f"Invalid original token: {e}")
+            raise ValueError(f"Invalid original token: {e}") from e
 
         original_token_id = original_claims.get("jti")
         original_subject = original_claims["sub"]
@@ -344,9 +339,7 @@ class XAAProtocol:
 
         return delegated_token
 
-    async def verify_token(
-        self, token_string: str, expected_audience: Optional[str] = None
-    ) -> Tuple[bool, Optional[Dict]]:
+    async def verify_token(self, token_string: str, expected_audience: str | None = None) -> tuple[bool, dict | None]:
         """
         Verify XAA token
 
@@ -434,7 +427,7 @@ class XAAProtocol:
         if chain_id not in self.delegation_chains:
             return 0
 
-        chain = self.delegation_chains[chain_id]
+        self.delegation_chains[chain_id]
 
         # Find all tokens in chain
         tokens_to_revoke = [
@@ -454,7 +447,7 @@ class XAAProtocol:
 
         return len(tokens_to_revoke)
 
-    async def introspect_token(self, token_string: str) -> Dict:
+    async def introspect_token(self, token_string: str) -> dict:
         """
         Introspect XAA token (RFC 7662)
 
@@ -567,7 +560,7 @@ class XAAProtocol:
         """Generate unique token ID"""
         return secrets.token_urlsafe(32)
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get XAA protocol metrics"""
         active_delegations = sum(
             1 for token in self.active_tokens.values() if token.token_type == XAATokenType.DELEGATED
@@ -584,7 +577,7 @@ class XAAProtocol:
             "delegation_chains": len(self.delegation_chains),
         }
 
-    def get_public_key_jwk(self) -> Dict:
+    def get_public_key_jwk(self) -> dict:
         """Get public key in JWK format"""
         public_numbers = self.public_key.public_numbers()
 
@@ -604,8 +597,8 @@ class XAAProtocol:
         }
 
     async def send_app_request(
-        self, token: str, target_app_id: str, method: str, endpoint: str, payload: Optional[Dict] = None
-    ) -> Dict:
+        self, token: str, target_app_id: str, method: str, endpoint: str, payload: dict | None = None
+    ) -> dict:
         """
         Send authenticated request to registered application
         Bidirectional communication: Agent → App
@@ -684,7 +677,7 @@ class XAAProtocol:
         except Exception as e:
             return {"success": False, "error": f"Request failed: {str(e)}"}
 
-    async def receive_app_callback(self, callback_token: str, data: Dict, source_app_id: str) -> Dict:
+    async def receive_app_callback(self, callback_token: str, data: dict, source_app_id: str) -> dict:
         """
         Receive callback from registered application
         Bidirectional communication: App → Agent
@@ -699,7 +692,7 @@ class XAAProtocol:
         """
         try:
             # Verify callback token
-            claims = await self.verify_token(callback_token)
+            await self.verify_token(callback_token)
 
             # Verify source app
             if source_app_id not in self.applications:
@@ -738,7 +731,7 @@ class XAAProtocol:
         except Exception as e:
             return {"success": False, "error": f"Callback processing failed: {str(e)}"}
 
-    async def establish_bidirectional_channel(self, agent_id: str, app_id: str, scopes: Set[str]) -> Dict:
+    async def establish_bidirectional_channel(self, agent_id: str, app_id: str, scopes: set[str]) -> dict:
         """
         Establish bidirectional communication channel
         Agent ↔ App persistent connection

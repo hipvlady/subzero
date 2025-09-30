@@ -14,20 +14,15 @@ Features:
 - Encrypted storage with Auth0's infrastructure
 """
 
-import asyncio
-import time
-import json
+import base64
 import hashlib
-from typing import Dict, List, Optional, Set
+import json
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime, timedelta
 
 import aiohttp
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
 
 from subzero.config.defaults import settings
 
@@ -64,11 +59,11 @@ class TokenMetadata:
     provider: TokenProvider
     token_type: TokenType
     scope: str
-    expires_at: Optional[float] = None
+    expires_at: float | None = None
     created_at: float = field(default_factory=time.time)
-    last_accessed: Optional[float] = None
+    last_accessed: float | None = None
     access_count: int = 0
-    tags: Dict[str, str] = field(default_factory=dict)
+    tags: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -91,7 +86,7 @@ class Auth0TokenVault:
         auth0_domain: str,
         management_api_token: str,
         vault_namespace: str = "ztag",
-        encryption_key: Optional[str] = None,
+        encryption_key: str | None = None,
     ):
         """
         Initialize Auth0 Token Vault
@@ -113,7 +108,7 @@ class Auth0TokenVault:
             self.cipher_suite = Fernet(Fernet.generate_key())
 
         # Token metadata cache
-        self.metadata_cache: Dict[str, TokenMetadata] = {}
+        self.metadata_cache: dict[str, TokenMetadata] = {}
 
         # HTTP session for Auth0 API
         connector = aiohttp.TCPConnector(limit=100)
@@ -134,11 +129,11 @@ class Auth0TokenVault:
         self,
         agent_id: str,
         provider: TokenProvider,
-        token_data: Dict,
+        token_data: dict,
         token_type: TokenType = TokenType.ACCESS_TOKEN,
         scope: str = "",
-        expires_in: Optional[int] = None,
-        tags: Optional[Dict[str, str]] = None,
+        expires_in: int | None = None,
+        tags: dict[str, str] | None = None,
     ) -> str:
         """
         Store token in Auth0 Token Vault
@@ -231,7 +226,7 @@ class Auth0TokenVault:
             print(f"❌ Token vault store error: {e}")
             return f"local:{token_id}"
 
-    async def retrieve_token(self, vault_reference: str, agent_id: str, auto_refresh: bool = True) -> Optional[Dict]:
+    async def retrieve_token(self, vault_reference: str, agent_id: str, auto_refresh: bool = True) -> dict | None:
         """
         Retrieve token from Auth0 Token Vault
 
@@ -293,7 +288,7 @@ class Auth0TokenVault:
             print(f"❌ Token decryption error: {e}")
             return None
 
-    async def _retrieve_from_auth0(self, vault_reference: str) -> Optional[bytes]:
+    async def _retrieve_from_auth0(self, vault_reference: str) -> bytes | None:
         """
         Retrieve encrypted token from Auth0
 
@@ -317,7 +312,7 @@ class Auth0TokenVault:
             print(f"❌ Token vault retrieve error: {e}")
             return None
 
-    async def refresh_token(self, vault_reference: str, agent_id: str) -> Optional[Dict]:
+    async def refresh_token(self, vault_reference: str, agent_id: str) -> dict | None:
         """
         Refresh expired token using refresh token
 
@@ -360,7 +355,7 @@ class Auth0TokenVault:
 
         return None
 
-    async def _refresh_with_provider(self, provider: TokenProvider, refresh_token_data: Dict) -> Optional[Dict]:
+    async def _refresh_with_provider(self, provider: TokenProvider, refresh_token_data: dict) -> dict | None:
         """
         Refresh token with specific provider
 
@@ -411,9 +406,9 @@ class Auth0TokenVault:
         vault_reference: str,
         source_agent_id: str,
         target_agent_id: str,
-        scope: Optional[str] = None,
+        scope: str | None = None,
         expires_in: int = 3600,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Delegate token access to another agent (federated token exchange)
 
@@ -494,7 +489,7 @@ class Auth0TokenVault:
             print(f"❌ Token revocation error: {e}")
             return False
 
-    async def list_tokens(self, agent_id: str, provider: Optional[TokenProvider] = None) -> List[TokenMetadata]:
+    async def list_tokens(self, agent_id: str, provider: TokenProvider | None = None) -> list[TokenMetadata]:
         """
         List all tokens for an agent
 
@@ -514,7 +509,7 @@ class Auth0TokenVault:
 
         return tokens
 
-    async def _fetch_metadata(self, vault_reference: str) -> Optional[TokenMetadata]:
+    async def _fetch_metadata(self, vault_reference: str) -> TokenMetadata | None:
         """Fetch metadata from Auth0"""
         url = f"https://{self.auth0_domain}/api/v2/token-vault/{self.vault_namespace}/tokens/{vault_reference}/metadata"
 
@@ -544,7 +539,7 @@ class Auth0TokenVault:
         data = f"{agent_id}:{provider.value}:{timestamp}"
         return hashlib.sha256(data.encode()).hexdigest()[:32]
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get Token Vault metrics"""
         return {
             "store_count": self.store_count,
@@ -552,7 +547,7 @@ class Auth0TokenVault:
             "refresh_count": self.refresh_count,
             "delegation_count": self.delegation_count,
             "cached_tokens": len(self.metadata_cache),
-            "providers": list(set(m.provider.value for m in self.metadata_cache.values())),
+            "providers": list({m.provider.value for m in self.metadata_cache.values()}),
         }
 
     async def close(self):

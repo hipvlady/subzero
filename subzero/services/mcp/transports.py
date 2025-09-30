@@ -16,14 +16,13 @@ Features:
 import asyncio
 import json
 import time
-from typing import Dict, Optional, Callable, Any, List
+from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from abc import ABC, abstractmethod
 
 import aiohttp
-from aiohttp import web, WSMsgType
-import grpc
+from aiohttp import WSMsgType
 
 
 class TransportType(str, Enum):
@@ -51,9 +50,9 @@ class TransportMessage:
 
     message_id: str
     message_type: str  # "request", "response", "notification", "error"
-    payload: Dict
+    payload: dict
     timestamp: float = field(default_factory=time.time)
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -72,12 +71,12 @@ class TransportMetrics:
 class MCPTransport(ABC):
     """Abstract base class for MCP transports"""
 
-    def __init__(self, auth_token: Optional[str] = None):
+    def __init__(self, auth_token: str | None = None):
         self.auth_token = auth_token
         self.state = TransportState.DISCONNECTED
         self.metrics = TransportMetrics()
-        self.message_handlers: Dict[str, Callable] = {}
-        self.connection_callbacks: List[Callable] = []
+        self.message_handlers: dict[str, Callable] = {}
+        self.connection_callbacks: list[Callable] = []
 
     @abstractmethod
     async def connect(self) -> bool:
@@ -95,7 +94,7 @@ class MCPTransport(ABC):
         pass
 
     @abstractmethod
-    async def receive_message(self) -> Optional[TransportMessage]:
+    async def receive_message(self) -> TransportMessage | None:
         """Receive message from transport"""
         pass
 
@@ -124,16 +123,16 @@ class WebSocketTransport(MCPTransport):
     """
 
     def __init__(
-        self, url: str, auth_token: Optional[str] = None, reconnect_interval: int = 5, max_reconnect_attempts: int = 10
+        self, url: str, auth_token: str | None = None, reconnect_interval: int = 5, max_reconnect_attempts: int = 10
     ):
         super().__init__(auth_token)
         self.url = url
         self.reconnect_interval = reconnect_interval
         self.max_reconnect_attempts = max_reconnect_attempts
-        self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.reconnect_task: Optional[asyncio.Task] = None
-        self.receive_task: Optional[asyncio.Task] = None
+        self.websocket: aiohttp.ClientWebSocketResponse | None = None
+        self.session: aiohttp.ClientSession | None = None
+        self.reconnect_task: asyncio.Task | None = None
+        self.receive_task: asyncio.Task | None = None
 
     async def connect(self) -> bool:
         """Establish WebSocket connection"""
@@ -187,7 +186,7 @@ class WebSocketTransport(MCPTransport):
             self.state = TransportState.DISCONNECTED
             await self._notify_connection_change(TransportState.DISCONNECTED)
 
-            print(f"✅ WebSocket disconnected")
+            print("✅ WebSocket disconnected")
             return True
 
         except Exception as e:
@@ -226,7 +225,7 @@ class WebSocketTransport(MCPTransport):
             await self._attempt_reconnect()
             return False
 
-    async def receive_message(self) -> Optional[TransportMessage]:
+    async def receive_message(self) -> TransportMessage | None:
         """Receive message from WebSocket"""
         # Messages are received in _receive_loop and dispatched to handlers
         # This method is for synchronous polling if needed
@@ -268,7 +267,7 @@ class WebSocketTransport(MCPTransport):
                     break
 
                 elif msg.type == WSMsgType.CLOSED:
-                    print(f"⚠️  WebSocket closed by server")
+                    print("⚠️  WebSocket closed by server")
                     await self._attempt_reconnect()
                     break
 
@@ -305,7 +304,7 @@ class WebSocketTransport(MCPTransport):
 
             # Attempt connection
             if await self.connect():
-                print(f"✅ Reconnection successful")
+                print("✅ Reconnection successful")
                 self.reconnect_task = None
                 return
 
@@ -322,12 +321,12 @@ class SSETransport(MCPTransport):
     One-way server-to-client streaming with HTTP POST for client-to-server
     """
 
-    def __init__(self, sse_url: str, post_url: str, auth_token: Optional[str] = None):
+    def __init__(self, sse_url: str, post_url: str, auth_token: str | None = None):
         super().__init__(auth_token)
         self.sse_url = sse_url
         self.post_url = post_url
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.sse_task: Optional[asyncio.Task] = None
+        self.session: aiohttp.ClientSession | None = None
+        self.sse_task: asyncio.Task | None = None
 
     async def connect(self) -> bool:
         """Establish SSE connection"""
@@ -374,7 +373,7 @@ class SSETransport(MCPTransport):
             self.state = TransportState.DISCONNECTED
             await self._notify_connection_change(TransportState.DISCONNECTED)
 
-            print(f"✅ SSE disconnected")
+            print("✅ SSE disconnected")
             return True
 
         except Exception as e:
@@ -417,12 +416,12 @@ class SSETransport(MCPTransport):
             print(f"❌ SSE send error: {e}")
             return False
 
-    async def receive_message(self) -> Optional[TransportMessage]:
+    async def receive_message(self) -> TransportMessage | None:
         """Receive message from SSE stream"""
         # Messages are received in _sse_loop and dispatched to handlers
         return None
 
-    async def _sse_loop(self, headers: Dict):
+    async def _sse_loop(self, headers: dict):
         """Background SSE receive loop"""
         try:
             async with self.session.get(self.sse_url, headers=headers) as response:
@@ -470,13 +469,13 @@ class HTTPLongPollingTransport(MCPTransport):
     Compatible with restricted network environments
     """
 
-    def __init__(self, poll_url: str, post_url: str, auth_token: Optional[str] = None, poll_timeout: int = 30):
+    def __init__(self, poll_url: str, post_url: str, auth_token: str | None = None, poll_timeout: int = 30):
         super().__init__(auth_token)
         self.poll_url = poll_url
         self.post_url = post_url
         self.poll_timeout = poll_timeout
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.poll_task: Optional[asyncio.Task] = None
+        self.session: aiohttp.ClientSession | None = None
+        self.poll_task: asyncio.Task | None = None
         self.running = False
 
     async def connect(self) -> bool:
@@ -522,7 +521,7 @@ class HTTPLongPollingTransport(MCPTransport):
             self.state = TransportState.DISCONNECTED
             await self._notify_connection_change(TransportState.DISCONNECTED)
 
-            print(f"✅ Long polling disconnected")
+            print("✅ Long polling disconnected")
             return True
 
         except Exception as e:
@@ -564,7 +563,7 @@ class HTTPLongPollingTransport(MCPTransport):
             print(f"❌ Long polling send error: {e}")
             return False
 
-    async def receive_message(self) -> Optional[TransportMessage]:
+    async def receive_message(self) -> TransportMessage | None:
         """Receive message from long poll"""
         # Messages are received in _poll_loop
         return None

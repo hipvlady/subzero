@@ -14,16 +14,13 @@ Features:
 - Real-time threat alerts
 """
 
-import asyncio
 import time
-from typing import Dict, List, Optional, Set, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
 from collections import deque
-from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
 
 import numpy as np
-from numba import jit
 
 from subzero.config.defaults import settings
 
@@ -58,7 +55,7 @@ class SecurityFinding:
     risk_level: RiskLevel
     category: str
     description: str
-    evidence: Dict
+    evidence: dict
     detected_at: float = field(default_factory=time.time)
     remediation_action: RemediationAction = RemediationAction.NONE
     remediated: bool = False
@@ -71,11 +68,11 @@ class AgentSecurityPosture:
     agent_id: str
     risk_score: float  # 0.0-1.0
     risk_level: RiskLevel
-    findings: List[SecurityFinding] = field(default_factory=list)
+    findings: list[SecurityFinding] = field(default_factory=list)
     last_assessment: float = field(default_factory=time.time)
     compliance_score: float = 1.0
     behavioral_anomalies: int = 0
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -98,19 +95,19 @@ class ISPMEngine:
 
     def __init__(self):
         # Agent postures
-        self.agent_postures: Dict[str, AgentSecurityPosture] = {}
+        self.agent_postures: dict[str, AgentSecurityPosture] = {}
 
         # Security findings
-        self.findings: Dict[str, SecurityFinding] = {}
+        self.findings: dict[str, SecurityFinding] = {}
 
         # Behavioral baselines: agent_id -> behavior metrics
-        self.behavioral_baselines: Dict[str, Dict] = {}
+        self.behavioral_baselines: dict[str, dict] = {}
 
         # Activity history: agent_id -> recent activities
-        self.activity_history: Dict[str, deque] = {}
+        self.activity_history: dict[str, deque] = {}
 
         # Compliance rules
-        self.compliance_rules: Dict[str, ComplianceRule] = {}
+        self.compliance_rules: dict[str, ComplianceRule] = {}
 
         # Remediation queue
         self.remediation_queue: deque = deque()
@@ -231,7 +228,7 @@ class ISPMEngine:
 
         return posture
 
-    async def _run_compliance_checks(self, agent_id: str) -> List[SecurityFinding]:
+    async def _run_compliance_checks(self, agent_id: str) -> list[SecurityFinding]:
         """Run all compliance checks for an agent"""
         findings = []
 
@@ -267,17 +264,17 @@ class ISPMEngine:
 
         return findings
 
-    async def check_token_expiry(self, agent_id: str) -> Optional[Dict]:
+    async def check_token_expiry(self, agent_id: str) -> dict | None:
         """Check if agent has expired tokens"""
         # Placeholder - integrate with token vault
         return None
 
-    async def check_excessive_permissions(self, agent_id: str) -> Optional[Dict]:
+    async def check_excessive_permissions(self, agent_id: str) -> dict | None:
         """Check if agent has excessive permissions"""
         # Placeholder - integrate with FGA
         return None
 
-    async def check_dormant_agent(self, agent_id: str) -> Optional[Dict]:
+    async def check_dormant_agent(self, agent_id: str) -> dict | None:
         """Check if agent is dormant"""
         if agent_id not in self.activity_history:
             return None
@@ -298,7 +295,7 @@ class ISPMEngine:
 
         return None
 
-    async def check_behavioral_anomaly(self, agent_id: str) -> Optional[Dict]:
+    async def check_behavioral_anomaly(self, agent_id: str) -> dict | None:
         """Check for behavioral anomalies"""
         anomaly_count = await self._detect_behavioral_anomalies(agent_id)
 
@@ -310,7 +307,7 @@ class ISPMEngine:
 
         return None
 
-    async def check_failed_auth(self, agent_id: str) -> Optional[Dict]:
+    async def check_failed_auth(self, agent_id: str) -> dict | None:
         """Check for failed authentication attempts"""
         if agent_id not in self.activity_history:
             return None
@@ -364,7 +361,7 @@ class ISPMEngine:
             anomaly_count += 1
 
         # Check access pattern anomaly
-        accessed_resources = set(a.get("resource") for a in recent_activities if a.get("resource"))
+        accessed_resources = {a.get("resource") for a in recent_activities if a.get("resource")}
         baseline_resources = set(baseline.get("common_resources", []))
 
         unusual_resources = accessed_resources - baseline_resources
@@ -396,7 +393,7 @@ class ISPMEngine:
 
         # Calculate baseline metrics
         timestamps = [a["timestamp"] for a in activities]
-        time_diffs = np.diff(timestamps)
+        np.diff(timestamps)
 
         avg_request_rate = len(activities) / ((timestamps[-1] - timestamps[0]) / 3600)
 
@@ -424,7 +421,7 @@ class ISPMEngine:
 
         print(f"📊 Baseline created for {agent_id}")
 
-    def _calculate_risk_score(self, findings: List[SecurityFinding]) -> float:
+    def _calculate_risk_score(self, findings: list[SecurityFinding]) -> float:
         """Calculate composite risk score from findings"""
         if not findings:
             return 0.0
@@ -456,7 +453,7 @@ class ISPMEngine:
         else:
             return RiskLevel.INFO
 
-    def _calculate_compliance_score(self, findings: List[SecurityFinding]) -> float:
+    def _calculate_compliance_score(self, findings: list[SecurityFinding]) -> float:
         """Calculate compliance score (inverse of risk)"""
         total_rules = len(self.compliance_rules)
 
@@ -464,7 +461,7 @@ class ISPMEngine:
             return 1.0
 
         # Count failed rules
-        failed_rules = len(set(f.category for f in findings))
+        failed_rules = len({f.category for f in findings})
 
         return 1.0 - (failed_rules / total_rules)
 
@@ -526,7 +523,7 @@ class ISPMEngine:
         """Send security alert"""
         self.alert_count += 1
 
-        alert_data = {
+        {
             "agent_id": posture.agent_id,
             "risk_level": posture.risk_level.value,
             "risk_score": posture.risk_score,
@@ -543,7 +540,7 @@ class ISPMEngine:
         print(f"🚨 ALERT: {finding.category} for {finding.agent_id}")
         return True
 
-    def record_activity(self, agent_id: str, activity_type: str, metadata: Optional[Dict] = None):
+    def record_activity(self, agent_id: str, activity_type: str, metadata: dict | None = None):
         """Record agent activity for behavioral analysis"""
         if agent_id not in self.activity_history:
             self.activity_history[agent_id] = deque(maxlen=10000)
@@ -552,7 +549,7 @@ class ISPMEngine:
 
         self.activity_history[agent_id].append(activity)
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get ISPM metrics"""
         return {
             "assessment_count": self.assessment_count,

@@ -14,14 +14,10 @@ Features:
 """
 
 import time
-import asyncio
-from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
 import redis.asyncio as redis
-import numpy as np
-from numba import jit
 
 from subzero.config.defaults import settings
 
@@ -118,7 +114,7 @@ class DistributedRateLimiter:
     Implements token bucket and sliding window algorithms
     """
 
-    def __init__(self, redis_url: str = None, default_limits: Optional[Dict[LimitType, RateLimit]] = None):
+    def __init__(self, redis_url: str = None, default_limits: dict[LimitType, RateLimit] | None = None):
         """
         Initialize rate limiter
 
@@ -151,15 +147,15 @@ class DistributedRateLimiter:
         }
 
         # Local token buckets for hot keys
-        self.local_buckets: Dict[str, TokenBucket] = {}
+        self.local_buckets: dict[str, TokenBucket] = {}
 
         # Metrics
         self.requests_allowed = 0
         self.requests_denied = 0
 
     async def check_rate_limit(
-        self, key: str, limit_type: LimitType = LimitType.PER_USER, custom_limit: Optional[RateLimit] = None
-    ) -> Tuple[bool, Dict]:
+        self, key: str, limit_type: LimitType = LimitType.PER_USER, custom_limit: RateLimit | None = None
+    ) -> tuple[bool, dict]:
         """
         Check if request is within rate limit
 
@@ -211,7 +207,7 @@ class DistributedRateLimiter:
 
         return allowed, metadata
 
-    async def _check_sliding_window(self, key: str, rate_limit: RateLimit, limit_type: LimitType) -> Tuple[bool, Dict]:
+    async def _check_sliding_window(self, key: str, rate_limit: RateLimit, limit_type: LimitType) -> tuple[bool, dict]:
         """
         Sliding window rate limit check using Redis
 
@@ -285,7 +281,7 @@ class DistributedRateLimiter:
         if bucket_key in self.local_buckets:
             del self.local_buckets[bucket_key]
 
-    async def get_current_usage(self, key: str, limit_type: LimitType) -> Dict:
+    async def get_current_usage(self, key: str, limit_type: LimitType) -> dict:
         """
         Get current rate limit usage for a key
 
@@ -324,7 +320,7 @@ class DistributedRateLimiter:
         except Exception as e:
             return {"error": str(e)}
 
-    async def get_global_stats(self) -> Dict:
+    async def get_global_stats(self) -> dict:
         """Get global rate limiter statistics"""
         total_requests = self.requests_allowed + self.requests_denied
         deny_rate = (self.requests_denied / max(total_requests, 1)) * 100

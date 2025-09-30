@@ -15,13 +15,10 @@ Features:
 - Redis caching for fast lookups
 """
 
-import asyncio
-import time
 import json
-from typing import Dict, List, Optional, Set
-from dataclasses import dataclass, field, asdict
+import time
+from dataclasses import asdict, dataclass, field
 from enum import Enum
-from datetime import datetime, timedelta
 
 import redis.asyncio as redis
 
@@ -57,7 +54,7 @@ class AppMetadata:
     privacy_policy_url: str = ""
     support_email: str = ""
     logo_url: str = ""
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -72,12 +69,12 @@ class AppConfiguration:
     # Authentication
     client_id: str = ""
     client_secret_hash: str = ""  # Hashed, never store plaintext
-    public_key: Optional[str] = None  # For token verification
+    public_key: str | None = None  # For token verification
 
     # Authorization
-    allowed_scopes: Set[str] = field(default_factory=set)
-    allowed_grant_types: Set[str] = field(default_factory=lambda: {"authorization_code", "refresh_token"})
-    allowed_response_types: Set[str] = field(default_factory=lambda: {"code"})
+    allowed_scopes: set[str] = field(default_factory=set)
+    allowed_grant_types: set[str] = field(default_factory=lambda: {"authorization_code", "refresh_token"})
+    allowed_response_types: set[str] = field(default_factory=lambda: {"code"})
 
     # XAA specific
     allowed_delegations: bool = True
@@ -85,9 +82,9 @@ class AppConfiguration:
     supports_bidirectional: bool = False
 
     # Endpoints
-    callback_urls: List[str] = field(default_factory=list)
-    webhook_url: Optional[str] = None
-    logout_urls: List[str] = field(default_factory=list)
+    callback_urls: list[str] = field(default_factory=list)
+    webhook_url: str | None = None
+    logout_urls: list[str] = field(default_factory=list)
 
     # Rate limiting
     rate_limit_requests: int = 1000  # Requests per window
@@ -100,7 +97,7 @@ class AppConfiguration:
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     created_by: str = ""
-    last_used_at: Optional[float] = None
+    last_used_at: float | None = None
 
 
 @dataclass
@@ -112,7 +109,7 @@ class AppStatistics:
     successful_requests: int = 0
     failed_requests: int = 0
     rate_limit_hits: int = 0
-    last_request_at: Optional[float] = None
+    last_request_at: float | None = None
     avg_response_time_ms: float = 0.0
     active_users: int = 0
     total_delegations: int = 0
@@ -124,7 +121,7 @@ class ApplicationRegistry:
     Manages application lifecycle and access control
     """
 
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: str | None = None):
         """
         Initialize application registry
 
@@ -136,8 +133,8 @@ class ApplicationRegistry:
         self.redis_client = redis.from_url(self.redis_url, encoding="utf-8", decode_responses=True)
 
         # In-memory cache (would be replaced with database in production)
-        self.applications: Dict[str, AppConfiguration] = {}
-        self.statistics: Dict[str, AppStatistics] = {}
+        self.applications: dict[str, AppConfiguration] = {}
+        self.statistics: dict[str, AppStatistics] = {}
 
         # Cache TTL
         self.cache_ttl = 300  # 5 minutes
@@ -146,8 +143,8 @@ class ApplicationRegistry:
         self,
         app_name: str,
         app_type: AppType,
-        callback_urls: List[str],
-        allowed_scopes: Set[str],
+        callback_urls: list[str],
+        allowed_scopes: set[str],
         created_by: str,
         **kwargs,
     ) -> AppConfiguration:
@@ -165,8 +162,8 @@ class ApplicationRegistry:
         Returns:
             AppConfiguration with generated credentials
         """
-        import secrets
         import hashlib
+        import secrets
 
         # Generate app ID and credentials
         app_id = f"app_{secrets.token_urlsafe(16)}"
@@ -202,7 +199,7 @@ class ApplicationRegistry:
 
         return app_config
 
-    async def get_application(self, app_id: str) -> Optional[AppConfiguration]:
+    async def get_application(self, app_id: str) -> AppConfiguration | None:
         """
         Get application configuration
 
@@ -226,7 +223,7 @@ class ApplicationRegistry:
 
         return app
 
-    async def get_application_by_client_id(self, client_id: str) -> Optional[AppConfiguration]:
+    async def get_application_by_client_id(self, client_id: str) -> AppConfiguration | None:
         """
         Get application by client ID
 
@@ -243,7 +240,7 @@ class ApplicationRegistry:
 
         return None
 
-    async def update_application(self, app_id: str, **updates) -> Optional[AppConfiguration]:
+    async def update_application(self, app_id: str, **updates) -> AppConfiguration | None:
         """
         Update application configuration
 
@@ -325,8 +322,8 @@ class ApplicationRegistry:
         return True
 
     async def list_applications(
-        self, status: Optional[AppStatus] = None, app_type: Optional[AppType] = None, limit: int = 100
-    ) -> List[AppConfiguration]:
+        self, status: AppStatus | None = None, app_type: AppType | None = None, limit: int = 100
+    ) -> list[AppConfiguration]:
         """
         List applications with filters
 
@@ -383,7 +380,7 @@ class ApplicationRegistry:
         alpha = 0.2  # Smoothing factor
         stats.avg_response_time_ms = alpha * response_time_ms + (1 - alpha) * stats.avg_response_time_ms
 
-    async def get_statistics(self, app_id: str) -> Optional[AppStatistics]:
+    async def get_statistics(self, app_id: str) -> AppStatistics | None:
         """
         Get application statistics
 
@@ -454,7 +451,7 @@ class ApplicationRegistry:
         except Exception as e:
             print(f"❌ Cache error: {e}")
 
-    async def _get_cached_app(self, app_id: str) -> Optional[AppConfiguration]:
+    async def _get_cached_app(self, app_id: str) -> AppConfiguration | None:
         """Get application from cache"""
         try:
             cache_key = f"app:{app_id}"

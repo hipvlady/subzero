@@ -14,20 +14,16 @@ Features:
 - Retention policies
 """
 
-import time
-import json
-import hashlib
-import gzip
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field, asdict
-from enum import Enum
-from datetime import datetime, timedelta
-
 import asyncio
+import hashlib
+import json
+import time
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
+
 from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
 
 from subzero.config.defaults import settings
 
@@ -92,32 +88,32 @@ class AuditEvent:
     timestamp: float = field(default_factory=time.time)
 
     # Subject (who performed the action)
-    actor_id: Optional[str] = None
+    actor_id: str | None = None
     actor_type: str = "user"  # user, agent, system
 
     # Object (what was acted upon)
-    resource_type: Optional[str] = None
-    resource_id: Optional[str] = None
+    resource_type: str | None = None
+    resource_id: str | None = None
 
     # Action details
     action: str = ""
     outcome: str = "success"  # success, failure, partial
 
     # Context
-    ip_address: Optional[str] = None
-    user_agent: Optional[str] = None
-    session_id: Optional[str] = None
+    ip_address: str | None = None
+    user_agent: str | None = None
+    session_id: str | None = None
 
     # Additional data
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # Compliance
     pii_included: bool = False
     retention_days: int = field(default_factory=lambda: settings.AUDIT_LOG_RETENTION_DAYS)
 
     # Integrity
-    previous_event_hash: Optional[str] = None
-    event_hash: Optional[str] = None
+    previous_event_hash: str | None = None
+    event_hash: str | None = None
 
     def compute_hash(self) -> str:
         """Compute tamper-proof hash of event"""
@@ -144,7 +140,7 @@ class AuditTrailStorage:
     Implements write-once, tamper-proof storage
     """
 
-    def __init__(self, encryption_key: Optional[bytes] = None):
+    def __init__(self, encryption_key: bytes | None = None):
         # Encryption for PII data
         if encryption_key:
             self.cipher = Fernet(encryption_key)
@@ -152,15 +148,15 @@ class AuditTrailStorage:
             self.cipher = Fernet(Fernet.generate_key())
 
         # In-memory storage (use database in production)
-        self.events: List[AuditEvent] = []
+        self.events: list[AuditEvent] = []
 
         # Index for fast queries
-        self.by_actor: Dict[str, List[str]] = {}
-        self.by_resource: Dict[str, List[str]] = {}
-        self.by_type: Dict[AuditEventType, List[str]] = {}
+        self.by_actor: dict[str, list[str]] = {}
+        self.by_resource: dict[str, list[str]] = {}
+        self.by_type: dict[AuditEventType, list[str]] = {}
 
         # Chain integrity
-        self.last_event_hash: Optional[str] = None
+        self.last_event_hash: str | None = None
 
         # Metrics
         self.total_events = 0
@@ -220,7 +216,7 @@ class AuditTrailStorage:
             print(f"❌ Failed to append audit event: {e}")
             return False
 
-    def _encrypt_metadata(self, metadata: Dict) -> Dict:
+    def _encrypt_metadata(self, metadata: dict) -> dict:
         """Encrypt sensitive metadata"""
         encrypted = {}
 
@@ -232,7 +228,7 @@ class AuditTrailStorage:
 
         return encrypted
 
-    def _decrypt_metadata(self, metadata: Dict) -> Dict:
+    def _decrypt_metadata(self, metadata: dict) -> dict:
         """Decrypt sensitive metadata"""
         decrypted = {}
 
@@ -240,7 +236,7 @@ class AuditTrailStorage:
             if isinstance(value, str):
                 try:
                     decrypted[key] = self.cipher.decrypt(value.encode()).decode()
-                except:
+                except Exception:
                     decrypted[key] = value
             else:
                 decrypted[key] = value
@@ -249,13 +245,13 @@ class AuditTrailStorage:
 
     async def query_events(
         self,
-        actor_id: Optional[str] = None,
-        resource_id: Optional[str] = None,
-        event_type: Optional[AuditEventType] = None,
-        start_time: Optional[float] = None,
-        end_time: Optional[float] = None,
+        actor_id: str | None = None,
+        resource_id: str | None = None,
+        event_type: AuditEventType | None = None,
+        start_time: float | None = None,
+        end_time: float | None = None,
         limit: int = 100,
-    ) -> List[AuditEvent]:
+    ) -> list[AuditEvent]:
         """
         Query audit events with filters
 
@@ -275,24 +271,24 @@ class AuditTrailStorage:
 
         # Apply filters
         if actor_id and actor_id in self.by_actor:
-            actor_indices = set(i for i, e in enumerate(self.events) if e.event_id in self.by_actor[actor_id])
+            actor_indices = {i for i, e in enumerate(self.events) if e.event_id in self.by_actor[actor_id]}
             candidates &= actor_indices
 
         if resource_id:
-            resource_indices = set(i for i, e in enumerate(self.events) if e.resource_id == resource_id)
+            resource_indices = {i for i, e in enumerate(self.events) if e.resource_id == resource_id}
             candidates &= resource_indices
 
         if event_type and event_type in self.by_type:
-            type_indices = set(i for i, e in enumerate(self.events) if e.event_id in self.by_type[event_type])
+            type_indices = {i for i, e in enumerate(self.events) if e.event_id in self.by_type[event_type]}
             candidates &= type_indices
 
         # Apply time filters
         if start_time or end_time:
-            time_indices = set(
+            time_indices = {
                 i
                 for i, e in enumerate(self.events)
                 if (not start_time or e.timestamp >= start_time) and (not end_time or e.timestamp <= end_time)
-            )
+            }
             candidates &= time_indices
 
         # Get events
@@ -308,7 +304,7 @@ class AuditTrailStorage:
 
         return result_events
 
-    def verify_integrity(self) -> Tuple[bool, List[str]]:
+    def verify_integrity(self) -> tuple[bool, list[str]]:
         """
         Verify integrity of audit trail
         Checks hash chain for tampering
@@ -344,7 +340,7 @@ class ComplianceManager:
     def __init__(self, storage: AuditTrailStorage):
         self.storage = storage
 
-    async def export_user_data(self, user_id: str) -> Dict:
+    async def export_user_data(self, user_id: str) -> dict:
         """
         Export all data for a user (GDPR right to data portability)
 
@@ -407,7 +403,7 @@ class ComplianceManager:
 
         return count
 
-    async def generate_compliance_report(self, start_date: datetime, end_date: datetime) -> Dict:
+    async def generate_compliance_report(self, start_date: datetime, end_date: datetime) -> dict:
         """
         Generate compliance report for audit period
 
@@ -459,11 +455,11 @@ class ComplianceManager:
             },
         }
 
-    def _check_gdpr_compliance(self, events: List[AuditEvent]) -> Dict:
+    def _check_gdpr_compliance(self, events: list[AuditEvent]) -> dict:
         """Check GDPR compliance status"""
         # Check if PII is encrypted
         pii_events = [e for e in events if e.pii_included]
-        all_encrypted = all(isinstance(e.metadata.get("encrypted"), (str, bytes)) for e in pii_events)
+        all_encrypted = all(isinstance(e.metadata.get("encrypted"), str | bytes) for e in pii_events)
 
         return {
             "compliant": all_encrypted,
@@ -472,7 +468,7 @@ class ComplianceManager:
             "data_portability_supported": True,
         }
 
-    def _check_hipaa_compliance(self, events: List[AuditEvent]) -> Dict:
+    def _check_hipaa_compliance(self, events: list[AuditEvent]) -> dict:
         """Check HIPAA compliance status"""
         # Check if all access is logged
         data_access_events = [
@@ -502,7 +498,7 @@ class AuditTrailService:
         self.event_queue: asyncio.Queue = asyncio.Queue()
 
         # Background processor
-        self._processor_task: Optional[asyncio.Task] = None
+        self._processor_task: asyncio.Task | None = None
 
     async def start(self):
         """Start audit trail service"""
@@ -560,7 +556,7 @@ class AuditTrailService:
         except Exception as e:
             print(f"❌ Failed to send to audit endpoint: {e}")
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Get audit trail statistics"""
         return {
             "total_events": self.storage.total_events,

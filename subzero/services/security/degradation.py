@@ -13,21 +13,15 @@ Features:
 - Audit logging of degraded operations
 """
 
-import time
 import asyncio
-from typing import Dict, Optional, List, Tuple, Set
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime, timedelta
 
 import jwt
-import httpx
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.backends import default_backend
 
-from subzero.config.defaults import settings
-from subzero.services.security.health import Auth0HealthMonitor, ServiceStatus, CircuitState
-from subzero.services.security.audit import AuditTrailService, AuditEvent, AuditEventType, AuditSeverity
+from subzero.services.security.audit import AuditEvent, AuditEventType, AuditSeverity, AuditTrailService
+from subzero.services.security.health import Auth0HealthMonitor, ServiceStatus
 
 
 class DegradedMode(str, Enum):
@@ -53,8 +47,8 @@ class CachedCredential:
 
     user_id: str
     token_hash: str
-    claims: Dict
-    scopes: Set[str]
+    claims: dict
+    scopes: set[str]
     expires_at: float
     cached_at: float = field(default_factory=time.time)
     source: CacheSource = CacheSource.REDIS
@@ -94,20 +88,20 @@ class GracefulDegradationService:
     Implements multiple fallback strategies
     """
 
-    def __init__(self, health_monitor: Auth0HealthMonitor, audit_service: Optional[AuditTrailService] = None):
+    def __init__(self, health_monitor: Auth0HealthMonitor, audit_service: AuditTrailService | None = None):
         self.health_monitor = health_monitor
         self.audit_service = audit_service or AuditTrailService()
 
         # Degradation state
         self.current_mode = DegradedMode.NORMAL
-        self.degradation_started: Optional[float] = None
+        self.degradation_started: float | None = None
         self.metrics = DegradationMetrics(degraded_mode=DegradedMode.NORMAL, started_at=time.time())
 
         # Cached credentials (in-memory fallback)
-        self.credential_cache: Dict[str, CachedCredential] = {}
+        self.credential_cache: dict[str, CachedCredential] = {}
 
         # Cached permissions (in-memory fallback)
-        self.permission_cache: Dict[str, CachedPermission] = {}
+        self.permission_cache: dict[str, CachedPermission] = {}
 
         # Degraded mode configuration
         self.config = {
@@ -120,7 +114,7 @@ class GracefulDegradationService:
         }
 
         # Background monitoring
-        self._monitor_task: Optional[asyncio.Task] = None
+        self._monitor_task: asyncio.Task | None = None
 
     async def start(self):
         """Start degradation monitoring"""
@@ -167,13 +161,13 @@ class GracefulDegradationService:
                 print(f"❌ Health monitoring error: {e}")
                 await asyncio.sleep(10)
 
-    async def _assess_overall_health(self) -> Dict[str, ServiceStatus]:
+    async def _assess_overall_health(self) -> dict[str, ServiceStatus]:
         """Assess health of all critical services"""
         health_checks = await self.health_monitor.check_all_services()
 
         return {service: check.status for service, check in health_checks.items()}
 
-    def _calculate_degradation_mode(self, health_status: Dict[str, ServiceStatus]) -> DegradedMode:
+    def _calculate_degradation_mode(self, health_status: dict[str, ServiceStatus]) -> DegradedMode:
         """Calculate appropriate degradation mode based on service health"""
         unhealthy_services = [service for service, status in health_status.items() if status == ServiceStatus.UNHEALTHY]
 
@@ -225,7 +219,7 @@ class GracefulDegradationService:
                     event_type=AuditEventType.CONFIG_CHANGED,
                     severity=AuditSeverity.HIGH if new_mode != DegradedMode.NORMAL else AuditSeverity.INFO,
                     actor_type="system",
-                    action=f"degradation_mode_change",
+                    action="degradation_mode_change",
                     metadata={
                         "old_mode": old_mode.value,
                         "new_mode": new_mode.value,
@@ -236,9 +230,7 @@ class GracefulDegradationService:
                 )
             )
 
-    async def validate_credential_cached(
-        self, token: str, force_cache: bool = False
-    ) -> Tuple[bool, Optional[Dict], str]:
+    async def validate_credential_cached(self, token: str, force_cache: bool = False) -> tuple[bool, dict | None, str]:
         """
         Validate credential using cached data when Auth0 unavailable
 
@@ -325,7 +317,7 @@ class GracefulDegradationService:
 
     async def check_permission_cached(
         self, user_id: str, resource_type: str, resource_id: str, relation: str, force_cache: bool = False
-    ) -> Tuple[bool, Optional[bool], str]:
+    ) -> tuple[bool, bool | None, str]:
         """
         Check permission using cached decisions when Auth0 FGA unavailable
 
@@ -395,7 +387,7 @@ class GracefulDegradationService:
         return True, cached.allowed, "cached_success"
 
     def cache_credential(
-        self, user_id: str, token: str, claims: Dict, expires_at: float, source: CacheSource = CacheSource.REDIS
+        self, user_id: str, token: str, claims: dict, expires_at: float, source: CacheSource = CacheSource.REDIS
     ):
         """Cache credential for fallback validation"""
         token_hash = self._hash_token(token)
@@ -434,7 +426,7 @@ class GracefulDegradationService:
 
         return hashlib.sha256(token.encode()).hexdigest()
 
-    async def should_block_operation(self, operation_type: str) -> Tuple[bool, str]:
+    async def should_block_operation(self, operation_type: str) -> tuple[bool, str]:
         """
         Check if operation should be blocked in current degradation mode
 
@@ -461,7 +453,7 @@ class GracefulDegradationService:
 
         return False, "allowed"
 
-    def get_degradation_status(self) -> Dict:
+    def get_degradation_status(self) -> dict:
         """Get current degradation status and metrics"""
         degradation_duration = 0
         if self.degradation_started:

@@ -8,11 +8,10 @@ This module provides production-ready structured logging with JSON formatting,
 context injection, and integration with monitoring systems.
 """
 
-import logging
 import json
+import logging
 import sys
 from datetime import datetime
-from typing import Any, Dict, Optional
 from enum import Enum
 
 
@@ -273,7 +272,7 @@ class SubzeroLogger:
 def setup_logging(
     level: LogLevel = LogLevel.INFO,
     structured: bool = True,
-    log_file: Optional[str] = None,
+    log_file: str | None = None,
 ) -> None:
     """
     Configure global logging for Subzero.

@@ -13,13 +13,12 @@ Features:
 """
 
 import time
-from typing import Dict, Optional, Tuple, Any
 from dataclasses import dataclass
 
-from subzero.services.auth.manager import Auth0IntegrationManager, Auth0Configuration
+from subzero.services.auth.manager import Auth0Configuration, Auth0IntegrationManager
+from subzero.services.security.audit import AuditEvent, AuditEventType, AuditSeverity, AuditTrailService
+from subzero.services.security.degradation import CacheSource, GracefulDegradationService
 from subzero.services.security.health import Auth0HealthMonitor
-from subzero.services.security.degradation import GracefulDegradationService, DegradedMode, CacheSource
-from subzero.services.security.audit import AuditTrailService, AuditEvent, AuditEventType, AuditSeverity
 
 
 @dataclass
@@ -27,13 +26,13 @@ class AuthenticationResult:
     """Result of authentication operation"""
 
     success: bool
-    user_id: Optional[str] = None
-    claims: Optional[Dict] = None
-    token_data: Optional[Dict] = None
+    user_id: str | None = None
+    claims: dict | None = None
+    token_data: dict | None = None
     source: str = "auth0"  # auth0, cached, error
     degradation_mode: str = "normal"
     latency_ms: float = 0.0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 @dataclass
@@ -45,7 +44,7 @@ class AuthorizationResult:
     degradation_mode: str = "normal"
     latency_ms: float = 0.0
     cached_decision: bool = False
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class ResilientAuthService:
@@ -101,7 +100,7 @@ class ResilientAuthService:
             await self.degradation_service.stop()
 
     async def authenticate(
-        self, user_id: str, token: Optional[str] = None, scopes: str = "openid profile email"
+        self, user_id: str, token: str | None = None, scopes: str = "openid profile email"
     ) -> AuthenticationResult:
         """
         Authenticate user with automatic failover to cached validation
@@ -396,7 +395,7 @@ class ResilientAuthService:
                 error=str(e),
             )
 
-    def get_service_metrics(self) -> Dict:
+    def get_service_metrics(self) -> dict:
         """Get comprehensive service metrics"""
         total_requests = self.metrics["total_auth_requests"] + self.metrics["total_authz_checks"]
         avg_latency = self.metrics["total_latency_ms"] / total_requests if total_requests > 0 else 0

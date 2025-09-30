@@ -16,7 +16,7 @@ Features:
 
 import asyncio
 import time
-from typing import Dict, List, Optional, Set, Any, Callable
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -48,12 +48,12 @@ class CapabilitySchema:
     name: str
     type: CapabilityType
     description: str
-    input_schema: Dict
-    output_schema: Dict
+    input_schema: dict
+    output_schema: dict
     complexity: OperationComplexity = OperationComplexity.SIMPLE
     version: str = "1.0.0"
-    requires: List[str] = field(default_factory=list)  # Dependencies
-    tags: Set[str] = field(default_factory=set)
+    requires: list[str] = field(default_factory=list)  # Dependencies
+    tags: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -62,9 +62,9 @@ class WorkflowStep:
 
     step_id: str
     capability_name: str
-    input_mapping: Dict[str, str]  # Map workflow vars to capability inputs
-    output_mapping: Dict[str, str]  # Map capability outputs to workflow vars
-    condition: Optional[str] = None  # Optional conditional execution
+    input_mapping: dict[str, str]  # Map workflow vars to capability inputs
+    output_mapping: dict[str, str]  # Map capability outputs to workflow vars
+    condition: str | None = None  # Optional conditional execution
     retry_count: int = 3
     timeout: int = 30
 
@@ -76,9 +76,9 @@ class Workflow:
     workflow_id: str
     name: str
     description: str
-    steps: List[WorkflowStep]
-    initial_context: Dict = field(default_factory=dict)
-    metadata: Dict = field(default_factory=dict)
+    steps: list[WorkflowStep]
+    initial_context: dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -87,10 +87,10 @@ class CapabilityExecutionContext:
 
     agent_id: str
     capability_name: str
-    input_data: Dict
-    workflow_id: Optional[str] = None
-    step_id: Optional[str] = None
-    metadata: Dict = field(default_factory=dict)
+    input_data: dict
+    workflow_id: str | None = None
+    step_id: str | None = None
+    metadata: dict = field(default_factory=dict)
 
 
 class DynamicCapabilityRegistry:
@@ -100,20 +100,20 @@ class DynamicCapabilityRegistry:
 
     def __init__(self):
         # Registered capabilities
-        self.capabilities: Dict[str, CapabilitySchema] = {}
+        self.capabilities: dict[str, CapabilitySchema] = {}
 
         # Capability implementations
-        self.implementations: Dict[str, Callable] = {}
+        self.implementations: dict[str, Callable] = {}
 
         # Workflows
-        self.workflows: Dict[str, Workflow] = {}
+        self.workflows: dict[str, Workflow] = {}
 
         # Capability dependencies graph
-        self.dependency_graph: Dict[str, Set[str]] = {}
+        self.dependency_graph: dict[str, set[str]] = {}
 
         # Usage metrics
-        self.execution_count: Dict[str, int] = {}
-        self.execution_time: Dict[str, List[float]] = {}
+        self.execution_count: dict[str, int] = {}
+        self.execution_time: dict[str, list[float]] = {}
 
     async def register_capability(self, capability: CapabilitySchema, implementation: Callable) -> bool:
         """
@@ -147,8 +147,8 @@ class DynamicCapabilityRegistry:
         return True
 
     async def discover_capabilities(
-        self, agent_id: str, tags: Optional[Set[str]] = None, complexity_max: Optional[OperationComplexity] = None
-    ) -> List[CapabilitySchema]:
+        self, agent_id: str, tags: set[str] | None = None, complexity_max: OperationComplexity | None = None
+    ) -> list[CapabilitySchema]:
         """
         Discover available capabilities for an agent
 
@@ -182,7 +182,7 @@ class DynamicCapabilityRegistry:
 
         return capabilities
 
-    async def negotiate_capabilities(self, agent_id: str, requested_capabilities: List[str]) -> Dict[str, bool]:
+    async def negotiate_capabilities(self, agent_id: str, requested_capabilities: list[str]) -> dict[str, bool]:
         """
         Negotiate which requested capabilities are available
 
@@ -213,7 +213,7 @@ class DynamicCapabilityRegistry:
 
         return negotiation_result
 
-    async def execute_capability(self, context: CapabilityExecutionContext) -> Dict:
+    async def execute_capability(self, context: CapabilityExecutionContext) -> dict:
         """
         Execute a capability
 
@@ -231,7 +231,7 @@ class DynamicCapabilityRegistry:
         if capability_name not in self.capabilities:
             raise ValueError(f"Unknown capability: {capability_name}")
 
-        capability = self.capabilities[capability_name]
+        self.capabilities[capability_name]
         implementation = self.implementations[capability_name]
 
         # Validate input against schema
@@ -281,7 +281,7 @@ class DynamicCapabilityRegistry:
 
         return True
 
-    async def execute_workflow(self, workflow_id: str, agent_id: str, initial_input: Dict) -> Dict:
+    async def execute_workflow(self, workflow_id: str, agent_id: str, initial_input: dict) -> dict:
         """
         Execute a multi-step workflow
 
@@ -376,7 +376,7 @@ class DynamicCapabilityRegistry:
             "execution_time_ms": execution_time,
         }
 
-    def _evaluate_condition(self, condition: str, context: Dict) -> bool:
+    def _evaluate_condition(self, condition: str, context: dict) -> bool:
         """
         Evaluate workflow condition
 
@@ -394,7 +394,7 @@ class DynamicCapabilityRegistry:
         except Exception:
             return False
 
-    def get_capability_metrics(self, capability_name: str) -> Dict:
+    def get_capability_metrics(self, capability_name: str) -> dict:
         """Get metrics for a specific capability"""
         if capability_name not in self.capabilities:
             return {}
@@ -414,7 +414,7 @@ class DynamicCapabilityRegistry:
             "p99_ms": float(np.percentile(exec_times_array, 99)),
         }
 
-    def get_registry_metrics(self) -> Dict:
+    def get_registry_metrics(self) -> dict:
         """Get overall registry metrics"""
         total_executions = sum(self.execution_count.values())
 

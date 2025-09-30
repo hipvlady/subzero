@@ -22,22 +22,20 @@ Performance Targets:
 """
 
 import asyncio
-import multiprocessing as mp
-import time
+import hashlib
 import logging
-from typing import Dict, List, Any, Optional, Tuple, Union
+import multiprocessing as mp
+import re
+import statistics
+import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import hashlib
-import statistics
-import re
-from functools import partial
-import threading
+from typing import Any
 
 try:
     import numpy as np
-    from numba import jit, types, prange
+    from numba import jit, prange
 
     NUMBA_AVAILABLE = True
 except ImportError:
@@ -79,15 +77,15 @@ class CPUBoundProcessor:
     4. Cache operations and cleanup
     """
 
-    def __init__(self, max_workers: Optional[int] = None, enable_shared_memory: bool = True, enable_numba: bool = True):
+    def __init__(self, max_workers: int | None = None, enable_shared_memory: bool = True, enable_numba: bool = True):
         self.max_workers = max_workers or min(8, (mp.cpu_count() or 4))
         self.enable_shared_memory = enable_shared_memory
         self.enable_numba = enable_numba and NUMBA_AVAILABLE
 
         # Process pools for different workload types
-        self.cpu_pool: Optional[ProcessPoolExecutor] = None
-        self.analytics_pool: Optional[ProcessPoolExecutor] = None
-        self.pattern_pool: Optional[ProcessPoolExecutor] = None
+        self.cpu_pool: ProcessPoolExecutor | None = None
+        self.analytics_pool: ProcessPoolExecutor | None = None
+        self.pattern_pool: ProcessPoolExecutor | None = None
 
         # Performance tracking
         self.task_count = 0
@@ -122,7 +120,7 @@ class CPUBoundProcessor:
             logger.error(f"❌ Failed to initialize process pools: {e}")
             # Fallback to None (will use single-threaded processing)
 
-    async def process_batch_coalescing_keys(self, contexts: List[Dict[str, Any]]) -> List[str]:
+    async def process_batch_coalescing_keys(self, contexts: list[dict[str, Any]]) -> list[str]:
         """
         Generate coalescing keys in parallel for batch requests
 
@@ -170,7 +168,7 @@ class CPUBoundProcessor:
             # Fallback to sequential processing
             return [_generate_coalescing_key_sync(ctx) for ctx in contexts]
 
-    async def process_analytics_batch(self, metrics_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def process_analytics_batch(self, metrics_data: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Process analytics and performance metrics in parallel
 
@@ -224,7 +222,7 @@ class CPUBoundProcessor:
             logger.error(f"Analytics processing failed: {e}")
             return _calculate_analytics_sync(metrics_data)
 
-    async def process_pattern_matching_batch(self, texts: List[str], patterns: List[str]) -> List[Dict[str, Any]]:
+    async def process_pattern_matching_batch(self, texts: list[str], patterns: list[str]) -> list[dict[str, Any]]:
         """
         Perform pattern matching on batch of texts in parallel
 
@@ -273,7 +271,7 @@ class CPUBoundProcessor:
             logger.error(f"Pattern matching failed: {e}")
             return [_match_patterns_sync(text, patterns) for text in texts]
 
-    async def process_cache_cleanup(self, cache_entries: Dict[str, Dict]) -> List[str]:
+    async def process_cache_cleanup(self, cache_entries: dict[str, dict]) -> list[str]:
         """
         Perform cache cleanup operations in parallel
 
@@ -325,7 +323,7 @@ class CPUBoundProcessor:
             logger.error(f"Cache cleanup failed: {e}")
             return _cleanup_cache_sync(cache_entries)
 
-    def get_performance_metrics(self) -> Dict[str, Any]:
+    def get_performance_metrics(self) -> dict[str, Any]:
         """Get CPU-bound processing performance metrics"""
         return {
             "cpu_bound_processor": {
@@ -368,7 +366,7 @@ class CPUBoundProcessor:
 # ===============================
 
 
-def _generate_coalescing_key_sync(context: Dict[str, Any]) -> str:
+def _generate_coalescing_key_sync(context: dict[str, Any]) -> str:
     """Generate coalescing key for a single context (CPU-bound)"""
     operation_type = context.get("operation_type", "")
     user_id = context.get("user_id", "")
@@ -390,12 +388,12 @@ def _generate_coalescing_key_sync(context: Dict[str, Any]) -> str:
     return hashlib.md5(key_data.encode()).hexdigest()[:16]
 
 
-def _process_coalescing_chunk(contexts: List[Dict[str, Any]]) -> List[str]:
+def _process_coalescing_chunk(contexts: list[dict[str, Any]]) -> list[str]:
     """Process a chunk of contexts for coalescing key generation"""
     return [_generate_coalescing_key_sync(ctx) for ctx in contexts]
 
 
-def _calculate_analytics_sync(metrics_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _calculate_analytics_sync(metrics_data: list[dict[str, Any]]) -> dict[str, Any]:
     """Calculate analytics synchronously (fallback)"""
     if not metrics_data:
         return {"error": "No data provided"}
@@ -418,7 +416,7 @@ def _calculate_analytics_sync(metrics_data: List[Dict[str, Any]]) -> Dict[str, A
     }
 
 
-def _calculate_throughput_stats(throughput_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _calculate_throughput_stats(throughput_data: list[dict[str, Any]]) -> dict[str, Any]:
     """Calculate throughput statistics (CPU-intensive)"""
     if not throughput_data:
         return {"avg": 0, "max": 0, "min": 0, "count": 0}
@@ -435,7 +433,7 @@ def _calculate_throughput_stats(throughput_data: List[Dict[str, Any]]) -> Dict[s
     }
 
 
-def _calculate_latency_stats(latency_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _calculate_latency_stats(latency_data: list[dict[str, Any]]) -> dict[str, Any]:
     """Calculate latency statistics (CPU-intensive)"""
     if not latency_data:
         return {"avg": 0, "p95": 0, "p99": 0, "count": 0}
@@ -462,7 +460,7 @@ def _calculate_latency_stats(latency_data: List[Dict[str, Any]]) -> Dict[str, An
     return result
 
 
-def _calculate_efficiency_scores(metrics_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _calculate_efficiency_scores(metrics_data: list[dict[str, Any]]) -> dict[str, Any]:
     """Calculate efficiency scores (CPU-intensive)"""
     if not metrics_data:
         return {"overall": 0, "coalescing": 0, "cache_hit_rate": 0}
@@ -491,7 +489,7 @@ def _calculate_efficiency_scores(metrics_data: List[Dict[str, Any]]) -> Dict[str
     }
 
 
-def _match_patterns_sync(text: str, patterns: List[str]) -> Dict[str, Any]:
+def _match_patterns_sync(text: str, patterns: list[str]) -> dict[str, Any]:
     """Match patterns against text synchronously"""
     matches = {}
 
@@ -515,12 +513,12 @@ def _match_patterns_sync(text: str, patterns: List[str]) -> Dict[str, Any]:
     }
 
 
-def _process_pattern_chunk(texts: List[str], patterns: List[str]) -> List[Dict[str, Any]]:
+def _process_pattern_chunk(texts: list[str], patterns: list[str]) -> list[dict[str, Any]]:
     """Process a chunk of texts for pattern matching"""
     return [_match_patterns_sync(text, patterns) for text in texts]
 
 
-def _cleanup_cache_sync(cache_entries: Dict[str, Dict]) -> List[str]:
+def _cleanup_cache_sync(cache_entries: dict[str, dict]) -> list[str]:
     """Cleanup cache entries synchronously"""
     current_time = time.time()
     expired_keys = []
@@ -536,7 +534,7 @@ def _cleanup_cache_sync(cache_entries: Dict[str, Dict]) -> List[str]:
     return expired_keys
 
 
-def _cleanup_cache_chunk(cache_chunk: Dict[str, Dict], current_time: float) -> List[str]:
+def _cleanup_cache_chunk(cache_chunk: dict[str, dict], current_time: float) -> list[str]:
     """Cleanup a chunk of cache entries"""
     expired_keys = []
 
@@ -571,7 +569,7 @@ if NUMBA_AVAILABLE:
 
 
 # Global instance for easy access
-_global_cpu_processor: Optional[CPUBoundProcessor] = None
+_global_cpu_processor: CPUBoundProcessor | None = None
 
 
 def get_cpu_processor() -> CPUBoundProcessor:

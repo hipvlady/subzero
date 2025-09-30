@@ -7,14 +7,12 @@ Command-line interface for Subzero Zero Trust API Gateway.
 This module provides the main entry point for running Subzero from the command line.
 """
 
-import sys
 import argparse
 import asyncio
-from typing import Optional
+import sys
 
 from subzero import __version__
 from subzero.subzeroapp import UnifiedZeroTrustGateway
-from subzero.config.defaults import settings
 
 
 def parse_args(args=None):

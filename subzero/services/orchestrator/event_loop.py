@@ -18,22 +18,18 @@ Performance Benefits:
 """
 
 import asyncio
-import time
+import hashlib
+import heapq
 import logging
-from abc import ABC, abstractmethod
+import time
+from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Any, Callable, TypeVar, Generic, Union
-from collections import defaultdict, deque
-import weakref
-import heapq
-import hashlib
-from concurrent.futures import ThreadPoolExecutor
-import threading
+from typing import Any, TypeVar
 
 try:
-    import numpy as np
-    from numba import jit, types
+    import numpy  # noqa: F401
 
     NUMBA_AVAILABLE = True
 except ImportError:
@@ -92,9 +88,9 @@ class RequestContext:
     request_id: str
     priority: RequestPriority
     operation_type: str
-    payload: Dict[str, Any]
-    user_id: Optional[str] = None
-    source_ip: Optional[str] = None
+    payload: dict[str, Any]
+    user_id: str | None = None
+    source_ip: str | None = None
     created_at: float = field(default_factory=time.time)
     timeout: float = 30.0
     retries: int = 0
@@ -191,8 +187,8 @@ class RequestCoalescer:
 
     def __init__(self, window_ms: float = 100.0):
         self.window_ms = window_ms
-        self.pending_requests: Dict[str, List[RequestContext]] = defaultdict(list)
-        self.results_cache: Dict[str, Any] = {}
+        self.pending_requests: dict[str, list[RequestContext]] = defaultdict(list)
+        self.results_cache: dict[str, Any] = {}
         self.lock = asyncio.Lock()
 
     def _generate_coalescing_key(self, context: RequestContext) -> str:
@@ -207,7 +203,7 @@ class RequestCoalescer:
             # Generic coalescing for other operations (CPU-intensive MD5 hashing)
             return f"{context.operation_type}:{hashlib.md5(str(context.payload).encode()).hexdigest()[:8]}"
 
-    async def _generate_coalescing_keys_batch(self, contexts: List[RequestContext]) -> List[str]:
+    async def _generate_coalescing_keys_batch(self, contexts: list[RequestContext]) -> list[str]:
         """Generate coalescing keys for batch of contexts using multiprocessing"""
         # Convert contexts to simple dictionaries for multiprocessing
         context_dicts = [
@@ -229,7 +225,7 @@ class RequestCoalescer:
         # Fallback to sequential processing
         return [self._generate_coalescing_key(ctx) for ctx in contexts]
 
-    async def should_coalesce(self, context: RequestContext) -> Optional[str]:
+    async def should_coalesce(self, context: RequestContext) -> str | None:
         """Check if request should be coalesced"""
         async with self.lock:
             key = self._generate_coalescing_key(context)
@@ -282,8 +278,8 @@ class PriorityQueue:
     """High-performance priority queue with timeout handling"""
 
     def __init__(self):
-        self.heap: List[tuple] = []
-        self.entry_finder: Dict[str, Any] = {}
+        self.heap: list[tuple] = []
+        self.entry_finder: dict[str, Any] = {}
         self.counter = 0
         self.lock = asyncio.Lock()
 
@@ -303,7 +299,7 @@ class PriorityQueue:
             self.entry_finder[context.request_id] = entry
             self.counter += 1
 
-    async def get(self) -> Optional[RequestContext]:
+    async def get(self) -> RequestContext | None:
         """Get highest priority request"""
         async with self.lock:
             while self.heap:
@@ -360,19 +356,19 @@ class FunctionalEventOrchestrator:
         # Core components
         self.priority_queue = PriorityQueue()
         self.coalescer = RequestCoalescer(window_ms=coalescing_window_ms)
-        self.circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self.circuit_breakers: dict[str, CircuitBreaker] = {}
 
         # CPU-bound multiprocessing processor
         self.cpu_processor = get_cpu_processor() if CPU_MULTIPROCESSING_AVAILABLE else None
 
         # Worker management
-        self.workers: List[asyncio.Task] = []
-        self.worker_stats: Dict[int, Dict] = {}
+        self.workers: list[asyncio.Task] = []
+        self.worker_stats: dict[int, dict] = {}
         self.shutdown_event = asyncio.Event()
 
         # Metrics and monitoring
         self.metrics = OrchestratorMetrics()
-        self.operation_handlers: Dict[str, Callable] = {}
+        self.operation_handlers: dict[str, Callable] = {}
 
         # Performance tracking
         self.latency_samples = deque(maxlen=1000)
@@ -424,10 +420,10 @@ class FunctionalEventOrchestrator:
     async def submit_request(
         self,
         operation_type: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         priority: RequestPriority = RequestPriority.NORMAL,
-        user_id: Optional[str] = None,
-        source_ip: Optional[str] = None,
+        user_id: str | None = None,
+        source_ip: str | None = None,
         timeout: float = 30.0,
     ) -> Any:
         """
@@ -624,7 +620,7 @@ class FunctionalEventOrchestrator:
                             # Update metrics with processed results
                             throughput_stats = analytics_results.get("throughput", {})
                             latency_stats = analytics_results.get("latency", {})
-                            efficiency_stats = analytics_results.get("efficiency", {})
+                            analytics_results.get("efficiency", {})
 
                             if throughput_stats:
                                 self.metrics.throughput_rps = throughput_stats.get("avg", self.metrics.throughput_rps)
@@ -661,7 +657,7 @@ class FunctionalEventOrchestrator:
                             cpu_bound_metrics = cpu_perf.get("cpu_bound_processor", {})
                             avg_speedup = cpu_bound_metrics.get("average_speedup", 1.0)
                             cpu_metrics = f", CPU_Speedup={avg_speedup:.1f}x"
-                        except:
+                        except Exception:
                             pass
 
                     logger.info(
@@ -694,7 +690,7 @@ class FunctionalEventOrchestrator:
         if self.latency_samples:
             self.metrics.avg_latency_ms = sum(self.latency_samples) / len(self.latency_samples)
 
-    def get_performance_metrics(self) -> Dict[str, Any]:
+    def get_performance_metrics(self) -> dict[str, Any]:
         """Get comprehensive orchestrator performance metrics"""
         efficiency = self.metrics.calculate_efficiency()
         uptime = time.time() - self.start_time
@@ -743,7 +739,7 @@ class FunctionalEventOrchestrator:
 
         return metrics_data
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Comprehensive health check for orchestrator"""
         current_time = time.time()
 
@@ -784,7 +780,7 @@ class FunctionalEventOrchestrator:
 
 
 # Convenience function for global orchestrator instance
-_global_orchestrator: Optional[FunctionalEventOrchestrator] = None
+_global_orchestrator: FunctionalEventOrchestrator | None = None
 
 
 def get_orchestrator(max_workers: int = 10) -> FunctionalEventOrchestrator:
@@ -798,7 +794,7 @@ def get_orchestrator(max_workers: int = 10) -> FunctionalEventOrchestrator:
 
 
 async def orchestrated_operation(
-    operation_type: str, payload: Dict[str, Any], priority: RequestPriority = RequestPriority.NORMAL, **kwargs
+    operation_type: str, payload: dict[str, Any], priority: RequestPriority = RequestPriority.NORMAL, **kwargs
 ) -> Any:
     """Convenience function for orchestrated operations"""
     orchestrator = get_orchestrator()

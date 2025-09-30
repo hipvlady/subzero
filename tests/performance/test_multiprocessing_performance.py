@@ -4,26 +4,24 @@ Validates the 8x+ performance improvements achieved through GIL bypass
 """
 
 import asyncio
-import time
 import multiprocessing as mp
+import os
 import statistics
-import psutil
-from typing import List, Dict, Any, Tuple
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-import numpy as np
-import pytest
 
 # Import multiprocessing components to test
 import sys
-import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any
+
+import psutil
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src"))
 
+from auth.distributed_cache import DistributedCacheManager
+from auth.high_performance_auth import HighPerformanceAuthenticator
 from auth.multiprocess_jwt import MultiProcessJWTProcessor
 from auth.parallel_hash import ParallelHashComputer
-from auth.distributed_cache import DistributedCacheManager
-from auth.hybrid_processor import HybridRequestProcessor, RequestContext, OperationType
-from auth.high_performance_auth import HighPerformanceAuthenticator
 from performance.multiprocess_monitor import MultiProcessingObserver
 
 
@@ -36,7 +34,7 @@ class MultiprocessingBenchmarks:
         self.results = {}
         self.system_info = self._get_system_info()
 
-    def _get_system_info(self) -> Dict[str, Any]:
+    def _get_system_info(self) -> dict[str, Any]:
         """Get system information for context"""
         return {
             "cpu_count": mp.cpu_count(),
@@ -46,7 +44,7 @@ class MultiprocessingBenchmarks:
             "python_version": sys.version,
         }
 
-    async def benchmark_jwt_processing(self) -> Dict[str, Any]:
+    async def benchmark_jwt_processing(self) -> dict[str, Any]:
         """
         Benchmark JWT processing: Single-threaded vs Multiprocessing
         Target: 8x improvement with multiprocessing
@@ -102,7 +100,7 @@ class MultiprocessingBenchmarks:
 
         return results
 
-    async def _benchmark_sequential_jwt(self, payloads: List[Dict]) -> float:
+    async def _benchmark_sequential_jwt(self, payloads: list[dict]) -> float:
         """Benchmark sequential JWT processing"""
         from auth.eddsa_key_manager import EdDSAKeyManager
 
@@ -110,10 +108,10 @@ class MultiprocessingBenchmarks:
 
         start_time = time.perf_counter()
         for payload in payloads:
-            token = key_manager.sign_jwt(payload)
+            key_manager.sign_jwt(payload)
         return time.perf_counter() - start_time
 
-    async def _benchmark_multiprocess_jwt(self, payloads: List[Dict]) -> float:
+    async def _benchmark_multiprocess_jwt(self, payloads: list[dict]) -> float:
         """Benchmark multiprocessing JWT processing"""
         processor = MultiProcessJWTProcessor(num_workers=mp.cpu_count())
 
@@ -129,7 +127,7 @@ class MultiprocessingBenchmarks:
         finally:
             await processor.close()
 
-    async def _benchmark_threading_jwt(self, payloads: List[Dict]) -> float:
+    async def _benchmark_threading_jwt(self, payloads: list[dict]) -> float:
         """Benchmark threading JWT processing (should be slow due to GIL)"""
         from auth.eddsa_key_manager import EdDSAKeyManager
 
@@ -145,11 +143,11 @@ class MultiprocessingBenchmarks:
 
         with ThreadPoolExecutor(max_workers=mp.cpu_count()) as executor:
             futures = [executor.submit(sign_jwt_batch, chunk) for chunk in chunks]
-            results = [future.result() for future in futures]
+            [future.result() for future in futures]
 
         return time.perf_counter() - start_time
 
-    async def benchmark_hash_computation(self) -> Dict[str, Any]:
+    async def benchmark_hash_computation(self) -> dict[str, Any]:
         """
         Benchmark hash computation: Sequential vs Parallel
         Target: 4x+ improvement with parallel processing
@@ -163,7 +161,7 @@ class MultiprocessingBenchmarks:
             print(f"\n  Testing {size} hash operations:")
 
             # Generate test data
-            test_data = [f"user_data_{i}_benchmark_test".encode("utf-8") for i in range(size)]
+            test_data = [f"user_data_{i}_benchmark_test".encode() for i in range(size)]
 
             # Sequential baseline
             sequential_time = await self._benchmark_sequential_hash(test_data)
@@ -187,7 +185,7 @@ class MultiprocessingBenchmarks:
 
         return results
 
-    async def _benchmark_sequential_hash(self, test_data: List[bytes]) -> float:
+    async def _benchmark_sequential_hash(self, test_data: list[bytes]) -> float:
         """Benchmark sequential hash computation"""
         hash_computer = ParallelHashComputer(num_workers=1)
 
@@ -200,7 +198,7 @@ class MultiprocessingBenchmarks:
         finally:
             hash_computer.close()
 
-    async def _benchmark_parallel_hash(self, test_data: List[bytes]) -> float:
+    async def _benchmark_parallel_hash(self, test_data: list[bytes]) -> float:
         """Benchmark parallel hash computation"""
         hash_computer = ParallelHashComputer(num_workers=mp.cpu_count())
 
@@ -216,7 +214,7 @@ class MultiprocessingBenchmarks:
         finally:
             hash_computer.close()
 
-    async def benchmark_cache_operations(self) -> Dict[str, Any]:
+    async def benchmark_cache_operations(self) -> dict[str, Any]:
         """
         Benchmark distributed cache vs local cache
         Target: Better scalability and shared state management
@@ -254,10 +252,10 @@ class MultiprocessingBenchmarks:
 
         return results
 
-    async def _benchmark_local_cache(self, test_data: Dict[str, Dict]) -> float:
+    async def _benchmark_local_cache(self, test_data: dict[str, dict]) -> float:
         """Benchmark local cache operations"""
-        from auth.cuckoo_cache import CuckooCache
         import numpy as np
+        from auth.cuckoo_cache import CuckooCache
 
         cache = CuckooCache(capacity=len(test_data) * 2)
 
@@ -271,11 +269,11 @@ class MultiprocessingBenchmarks:
         # Get operations
         for key in test_data.keys():
             key_hash = hash(key) % (2**32)
-            result = cache.get(np.uint64(key_hash))
+            cache.get(np.uint64(key_hash))
 
         return time.perf_counter() - start_time
 
-    async def _benchmark_distributed_cache(self, test_data: Dict[str, Dict]) -> float:
+    async def _benchmark_distributed_cache(self, test_data: dict[str, dict]) -> float:
         """Benchmark distributed cache operations"""
         cache = DistributedCacheManager(capacity=len(test_data) * 2)
 
@@ -288,14 +286,14 @@ class MultiprocessingBenchmarks:
 
             # Get operations
             for key in test_data.keys():
-                result = await cache.get(key)
+                await cache.get(key)
 
             return time.perf_counter() - start_time
 
         finally:
             await cache.close()
 
-    async def benchmark_end_to_end_authentication(self) -> Dict[str, Any]:
+    async def benchmark_end_to_end_authentication(self) -> dict[str, Any]:
         """
         Benchmark complete authentication flow
         Target: 40,000+ ops/second with multiprocessing
@@ -332,7 +330,7 @@ class MultiprocessingBenchmarks:
 
         return results
 
-    async def _benchmark_traditional_auth(self, user_ids: List[str]) -> float:
+    async def _benchmark_traditional_auth(self, user_ids: list[str]) -> float:
         """Benchmark traditional authentication"""
         auth = HighPerformanceAuthenticator(
             auth0_domain="benchmark.auth0.com", client_id="benchmark_client", enable_multiprocessing=False
@@ -354,7 +352,7 @@ class MultiprocessingBenchmarks:
         finally:
             await auth.close()
 
-    async def _benchmark_multiprocess_auth(self, user_ids: List[str]) -> float:
+    async def _benchmark_multiprocess_auth(self, user_ids: list[str]) -> float:
         """Benchmark multiprocessing authentication"""
         auth = HighPerformanceAuthenticator(
             auth0_domain="benchmark.auth0.com", client_id="benchmark_client", enable_multiprocessing=True
@@ -371,7 +369,7 @@ class MultiprocessingBenchmarks:
         finally:
             await auth.close()
 
-    async def benchmark_system_resource_usage(self) -> Dict[str, Any]:
+    async def benchmark_system_resource_usage(self) -> dict[str, Any]:
         """
         Benchmark system resource usage
         Verify multiprocessing doesn't overwhelm system resources
@@ -402,7 +400,7 @@ class MultiprocessingBenchmarks:
             ]
 
             start_time = time.perf_counter()
-            tokens = await processor.batch_sign_jwts(large_payloads)
+            await processor.batch_sign_jwts(large_payloads)
             processing_time = time.perf_counter() - start_time
 
             await processor.close()
@@ -432,14 +430,14 @@ class MultiprocessingBenchmarks:
         finally:
             await monitor.stop_monitoring()
 
-    def generate_performance_report(self, all_results: Dict[str, Any]) -> str:
+    def generate_performance_report(self, all_results: dict[str, Any]) -> str:
         """Generate comprehensive performance report"""
 
         report = []
         report.append("=" * 80)
         report.append("MULTIPROCESSING PERFORMANCE BENCHMARK REPORT")
         report.append("=" * 80)
-        report.append(f"System Information:")
+        report.append("System Information:")
         report.append(
             f"  CPU Cores: {self.system_info['cpu_count']} logical, {self.system_info['physical_cores']} physical"
         )
@@ -486,7 +484,7 @@ class MultiprocessingBenchmarks:
             for test_size, data in cache_results.items():
                 report.append(f"  {test_size}:")
                 report.append(f"    Distributed cache overhead: {data['distributed_overhead']:.1f}x")
-                report.append(f"    Shared state capability: ✅ Enabled")
+                report.append("    Shared state capability: ✅ Enabled")
                 report.append("")
 
         # End-to-End Results
@@ -543,10 +541,10 @@ class MultiprocessingBenchmarks:
 
         report.append("")
         report.append("RECOMMENDATIONS:")
-        report.append(f"  ✅ Multiprocessing provides significant performance improvements")
-        report.append(f"  ✅ GIL bypass enables true parallel execution")
-        report.append(f"  ✅ System resources are efficiently utilized")
-        report.append(f"  ✅ Target throughput capabilities demonstrated")
+        report.append("  ✅ Multiprocessing provides significant performance improvements")
+        report.append("  ✅ GIL bypass enables true parallel execution")
+        report.append("  ✅ System resources are efficiently utilized")
+        report.append("  ✅ Target throughput capabilities demonstrated")
 
         return "\n".join(report)
 
@@ -587,7 +585,7 @@ async def run_comprehensive_benchmarks():
         with open("multiprocessing_benchmark_results.json", "w") as f:
             json.dump(all_results, f, indent=2)
 
-        print(f"\n📊 Detailed results saved to: multiprocessing_benchmark_results.json")
+        print("\n📊 Detailed results saved to: multiprocessing_benchmark_results.json")
 
         return all_results
 

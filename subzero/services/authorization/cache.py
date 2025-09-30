@@ -15,16 +15,15 @@ Features:
 """
 
 import asyncio
-import time
 import hashlib
-from typing import Dict, Optional, Tuple, List, Set
-from dataclasses import dataclass, field
+import time
 from collections import OrderedDict
+from dataclasses import dataclass, field
 from enum import Enum
 
 import numpy as np
-from numba import jit
 import redis.asyncio as redis
+from numba import jit
 
 
 class CacheLevel(str, Enum):
@@ -42,7 +41,7 @@ class CacheEntry:
     allowed: bool
     cached_at: float
     ttl: int
-    metadata: Dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
     def is_expired(self) -> bool:
         """Check if cache entry is expired"""
@@ -144,7 +143,7 @@ class LRUCache:
         self.hits = 0
         self.misses = 0
 
-    async def get(self, key: str) -> Optional[CacheEntry]:
+    async def get(self, key: str) -> CacheEntry | None:
         """
         Get cached entry
 
@@ -223,7 +222,7 @@ class LRUCache:
         async with self.lock:
             self.cache.clear()
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Get cache statistics"""
         total_requests = self.hits + self.misses
         hit_rate = (self.hits / max(total_requests, 1)) * 100
@@ -253,7 +252,7 @@ class RedisCache:
         """
         self.redis_url = redis_url
         self.key_prefix = key_prefix
-        self.redis_client: Optional[redis.Redis] = None
+        self.redis_client: redis.Redis | None = None
 
         # Metrics
         self.hits = 0
@@ -263,7 +262,7 @@ class RedisCache:
         """Establish Redis connection"""
         self.redis_client = await redis.from_url(self.redis_url, encoding="utf-8", decode_responses=True)
 
-    async def get(self, key: str) -> Optional[CacheEntry]:
+    async def get(self, key: str) -> CacheEntry | None:
         """
         Get cached entry from Redis
 
@@ -390,7 +389,7 @@ class RedisCache:
         except Exception as e:
             print(f"Redis clear error: {e}")
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Get Redis cache statistics"""
         total_requests = self.hits + self.misses
         hit_rate = (self.hits / max(total_requests, 1)) * 100
@@ -412,7 +411,7 @@ class AuthorizationCache:
     def __init__(
         self,
         l1_capacity: int = 10000,
-        redis_url: Optional[str] = None,
+        redis_url: str | None = None,
         enable_bloom_filter: bool = True,
         default_ttl: int = 300,
     ):
@@ -429,12 +428,12 @@ class AuthorizationCache:
         self.l1_cache = LRUCache(capacity=l1_capacity)
 
         # L2 cache (Redis)
-        self.l2_cache: Optional[RedisCache] = None
+        self.l2_cache: RedisCache | None = None
         if redis_url:
             self.l2_cache = RedisCache(redis_url)
 
         # Bloom filter for negative caching
-        self.bloom_filter: Optional[BloomFilter] = None
+        self.bloom_filter: BloomFilter | None = None
         if enable_bloom_filter:
             self.bloom_filter = BloomFilter()
 
@@ -451,7 +450,7 @@ class AuthorizationCache:
         if self.l2_cache:
             await self.l2_cache.connect()
 
-    async def get(self, cache_key: CacheKey) -> Tuple[Optional[bool], CacheLevel]:
+    async def get(self, cache_key: CacheKey) -> tuple[bool | None, CacheLevel]:
         """
         Get authorization decision from cache
 
@@ -490,7 +489,7 @@ class AuthorizationCache:
         self.misses += 1
         return None, CacheLevel.MISS
 
-    async def put(self, cache_key: CacheKey, allowed: bool, ttl: Optional[int] = None, metadata: Optional[Dict] = None):
+    async def put(self, cache_key: CacheKey, allowed: bool, ttl: int | None = None, metadata: dict | None = None):
         """
         Put authorization decision in cache
 
@@ -571,7 +570,7 @@ class AuthorizationCache:
         if self.bloom_filter:
             self.bloom_filter.clear()
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get comprehensive cache metrics"""
         total = self.total_requests
         overall_hit_rate = ((self.l1_hits + self.l2_hits) / max(total, 1)) * 100

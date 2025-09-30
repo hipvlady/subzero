@@ -6,6 +6,7 @@ Basic performance benchmarks for configuration loading.
 """
 
 import pytest
+
 from subzero.config.defaults import Settings
 
 

@@ -13,13 +13,9 @@ Addresses:
 """
 
 import time
-from typing import Dict, List, Optional, Tuple, Set
+from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
-from collections import deque, defaultdict
-
-import numpy as np
-from numba import jit
 
 
 class ThreatType(str, Enum):
@@ -41,7 +37,7 @@ class ThreatSignal:
     threat_type: ThreatType
     confidence: float  # 0.0-1.0
     severity: int  # 1-10
-    evidence: Dict
+    evidence: dict
     detected_at: float = field(default_factory=time.time)
 
 
@@ -51,7 +47,7 @@ class ThreatAssessment:
 
     entity_id: str  # Agent/user/IP
     threat_score: float  # 0.0-1.0
-    signals: List[ThreatSignal]
+    signals: list[ThreatSignal]
     recommendation: str
     should_block: bool = False
 
@@ -73,17 +69,17 @@ class SignupFraudDetector:
         }
 
         # IP reputation cache
-        self.ip_reputation: Dict[str, float] = {}
+        self.ip_reputation: dict[str, float] = {}
 
         # Signup velocity tracking: email_domain -> signup_count
-        self.signup_velocity: Dict[str, deque] = defaultdict(lambda: deque(maxlen=100))
+        self.signup_velocity: dict[str, deque] = defaultdict(lambda: deque(maxlen=100))
 
         # Device fingerprint tracking
-        self.device_fingerprints: Set[str] = set()
+        self.device_fingerprints: set[str] = set()
 
     async def detect(
-        self, email: str, ip_address: str, user_agent: str, metadata: Optional[Dict] = None
-    ) -> List[ThreatSignal]:
+        self, email: str, ip_address: str, user_agent: str, metadata: dict | None = None
+    ) -> list[ThreatSignal]:
         """
         Detect signup fraud signals
 
@@ -200,14 +196,14 @@ class AccountTakeoverDetector:
 
     def __init__(self):
         # Normal login patterns: user_id -> login_history
-        self.login_patterns: Dict[str, List[Dict]] = defaultdict(list)
+        self.login_patterns: dict[str, list[dict]] = defaultdict(list)
 
         # Failed login tracking: user_id -> failed_attempts
-        self.failed_logins: Dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
+        self.failed_logins: dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
 
     async def detect(
-        self, user_id: str, ip_address: str, location: Optional[str] = None, device_fingerprint: Optional[str] = None
-    ) -> List[ThreatSignal]:
+        self, user_id: str, ip_address: str, location: str | None = None, device_fingerprint: str | None = None
+    ) -> list[ThreatSignal]:
         """
         Detect ATO signals
 
@@ -305,7 +301,7 @@ class AccountTakeoverDetector:
         if user_id not in self.login_patterns:
             return True
 
-        known_devices = set(login.get("device") for login in self.login_patterns[user_id] if login.get("device"))
+        known_devices = {login.get("device") for login in self.login_patterns[user_id] if login.get("device")}
 
         return device_fingerprint not in known_devices
 
@@ -318,12 +314,12 @@ class MFAAbuseDetector:
 
     def __init__(self):
         # MFA attempt tracking: user_id -> attempts
-        self.mfa_attempts: Dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
+        self.mfa_attempts: dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
 
         # Push notification bombing detection
-        self.push_bombing: Dict[str, deque] = defaultdict(lambda: deque(maxlen=20))
+        self.push_bombing: dict[str, deque] = defaultdict(lambda: deque(maxlen=20))
 
-    async def detect(self, user_id: str, mfa_method: str, success: bool) -> List[ThreatSignal]:
+    async def detect(self, user_id: str, mfa_method: str, success: bool) -> list[ThreatSignal]:
         """
         Detect MFA abuse
 
@@ -392,7 +388,7 @@ class HallucinationDetector:
             "invented_quotes",
         }
 
-    async def detect(self, generated_text: str, source_documents: Optional[List[str]] = None) -> List[ThreatSignal]:
+    async def detect(self, generated_text: str, source_documents: list[str] | None = None) -> list[ThreatSignal]:
         """
         Detect AI hallucinations
 
@@ -439,7 +435,7 @@ class HallucinationDetector:
 
         return signals
 
-    def _calculate_grounding(self, text: str, sources: List[str]) -> float:
+    def _calculate_grounding(self, text: str, sources: list[str]) -> float:
         """Calculate how well text is grounded in sources"""
         text_words = set(text.lower().split())
         source_words = set(" ".join(sources).lower().split())
@@ -466,7 +462,7 @@ class AdvancedThreatDetector:
         self.detections_count = 0
         self.blocks_count = 0
 
-    async def assess_threat(self, entity_id: str, context: Dict) -> ThreatAssessment:
+    async def assess_threat(self, entity_id: str, context: dict) -> ThreatAssessment:
         """
         Comprehensive threat assessment
 
@@ -531,7 +527,7 @@ class AdvancedThreatDetector:
 
         return assessment
 
-    def _calculate_threat_score(self, signals: List[ThreatSignal]) -> float:
+    def _calculate_threat_score(self, signals: list[ThreatSignal]) -> float:
         """Calculate composite threat score"""
         if not signals:
             return 0.0
@@ -541,7 +537,7 @@ class AdvancedThreatDetector:
 
         return min(1.0, weighted_sum / len(signals))
 
-    def _generate_recommendation(self, signals: List[ThreatSignal], score: float) -> str:
+    def _generate_recommendation(self, signals: list[ThreatSignal], score: float) -> str:
         """Generate recommendation based on signals"""
         if not signals:
             return "Allow - no threats detected"
@@ -557,7 +553,7 @@ class AdvancedThreatDetector:
         else:
             return "ALLOW - Low risk"
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get threat detection metrics"""
         block_rate = (self.blocks_count / max(self.detections_count, 1)) * 100
 

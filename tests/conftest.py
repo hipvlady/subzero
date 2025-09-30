@@ -7,11 +7,11 @@ Pytest configuration and fixtures for Subzero tests.
 This module provides shared fixtures, configuration, and utilities for all test files.
 """
 
-import pytest
 import asyncio
 import os
-from typing import Dict, Optional
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 # Set test environment variables
 os.environ.setdefault("AUTH0_DOMAIN", "test.auth0.com")
@@ -26,7 +26,6 @@ os.environ.setdefault("FGA_API_URL", "https://api.test.fga.dev")
 
 from subzero.services.auth.manager import Auth0Configuration
 from subzero.subzeroapp import UnifiedZeroTrustGateway
-
 
 # ========================================
 # Event Loop Configuration
@@ -77,7 +76,7 @@ def auth0_config():
 
 
 @pytest.fixture
-def test_config() -> Dict:
+def test_config() -> dict:
     """
     Provide general test configuration.
 
@@ -174,7 +173,7 @@ def expired_jwt_token() -> str:
 
 
 @pytest.fixture
-def test_user_claims() -> Dict:
+def test_user_claims() -> dict:
     """
     Provide test user claims.
 

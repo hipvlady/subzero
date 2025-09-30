@@ -15,26 +15,21 @@ Expected Performance Gains:
 """
 
 import asyncio
-import time
-import pytest
 import logging
+import os
 import random
 import statistics
-from typing import Dict, List, Any
-from concurrent.futures import ThreadPoolExecutor
-import threading
-
 import sys
-import os
+import time
+from typing import Any
+
+import pytest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.performance.functional_event_orchestrator import (
     FunctionalEventOrchestrator,
     RequestPriority,
-    RequestContext,
-    get_orchestrator,
-    orchestrated_operation,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,7 +44,7 @@ class MockAuthenticationService:
         self.call_count = 0
         self.unique_requests = set()
 
-    async def authenticate(self, payload: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+    async def authenticate(self, payload: dict[str, Any], **kwargs) -> dict[str, Any]:
         """Mock authentication with configurable latency and failure rate"""
         self.call_count += 1
 
@@ -85,7 +80,7 @@ class MockAuthorizationService:
         self.failure_rate = failure_rate
         self.call_count = 0
 
-    async def authorize(self, payload: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+    async def authorize(self, payload: dict[str, Any], **kwargs) -> dict[str, Any]:
         """Mock authorization with configurable latency and failure rate"""
         self.call_count += 1
 
@@ -131,7 +126,7 @@ class PerformanceBenchmark:
         await orchestrator.start()
         return orchestrator
 
-    async def run_direct_benchmark(self, num_requests: int, duplicate_ratio: float = 0.4) -> Dict[str, Any]:
+    async def run_direct_benchmark(self, num_requests: int, duplicate_ratio: float = 0.4) -> dict[str, Any]:
         """Run benchmark without orchestrator (direct service calls)"""
         logger.info(f"Running direct benchmark: {num_requests} requests, {duplicate_ratio:.0%} duplicates")
 
@@ -151,7 +146,7 @@ class PerformanceBenchmark:
                     result = await self.authz_service.authorize(req["payload"], user_id=req["user_id"])
 
                 results.append(result)
-            except Exception as e:
+            except Exception:
                 errors += 1
 
         total_time = time.perf_counter() - start_time
@@ -176,7 +171,7 @@ class PerformanceBenchmark:
 
     async def run_orchestrated_benchmark(
         self, num_requests: int, duplicate_ratio: float = 0.4, max_workers: int = 10
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run benchmark with orchestrator optimization"""
         logger.info(f"Running orchestrated benchmark: {num_requests} requests, {duplicate_ratio:.0%} duplicates")
 
@@ -243,7 +238,7 @@ class PerformanceBenchmark:
         finally:
             await orchestrator.stop()
 
-    def _generate_request_patterns(self, num_requests: int, duplicate_ratio: float) -> List[Dict[str, Any]]:
+    def _generate_request_patterns(self, num_requests: int, duplicate_ratio: float) -> list[dict[str, Any]]:
         """Generate realistic request patterns with configurable duplication"""
         requests = []
 
@@ -304,7 +299,7 @@ async def test_latency_reduction_benchmark():
         "avg_latency_ms"
     ]
 
-    logger.info(f"Latency Improvement Results:")
+    logger.info("Latency Improvement Results:")
     logger.info(f"  Direct avg latency: {direct_results['avg_latency_ms']:.2f}ms")
     logger.info(f"  Orchestrated avg latency: {orchestrated_results['avg_latency_ms']:.2f}ms")
     logger.info(f"  Improvement: {latency_improvement:.1%}")
@@ -312,7 +307,7 @@ async def test_latency_reduction_benchmark():
 
     # Verify targets
     assert latency_improvement >= 0.40, f"Expected ≥40% latency improvement, got {latency_improvement:.1%}"
-    assert orchestrated_results["coalescing_rate"] >= 0.30, f"Expected ≥30% coalescing rate"
+    assert orchestrated_results["coalescing_rate"] >= 0.30, "Expected ≥30% coalescing rate"
 
     print(f"✅ Latency reduction: {latency_improvement:.1%} (Target: ≥40%)")
 
@@ -336,7 +331,7 @@ async def test_throughput_improvement_benchmark():
     # Calculate improvements
     throughput_improvement = orchestrated_results["throughput_rps"] / direct_results["throughput_rps"]
 
-    logger.info(f"Throughput Improvement Results:")
+    logger.info("Throughput Improvement Results:")
     logger.info(f"  Direct throughput: {direct_results['throughput_rps']:.1f} RPS")
     logger.info(f"  Orchestrated throughput: {orchestrated_results['throughput_rps']:.1f} RPS")
     logger.info(f"  Improvement: {throughput_improvement:.1f}x")
@@ -373,7 +368,7 @@ async def test_resource_utilization_benchmark():
 
     resource_efficiency = (direct_service_calls - orchestrated_service_calls) / direct_service_calls
 
-    logger.info(f"Resource Utilization Results:")
+    logger.info("Resource Utilization Results:")
     logger.info(f"  Direct service calls: {direct_service_calls}")
     logger.info(f"  Orchestrated service calls: {orchestrated_service_calls}")
     logger.info(f"  Resource efficiency gain: {resource_efficiency:.1%}")
@@ -395,7 +390,7 @@ async def test_circuit_breaker_resilience():
             self.call_count = 0
             self.failure_count = 0
 
-        async def failing_operation(self, payload: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        async def failing_operation(self, payload: dict[str, Any], **kwargs) -> dict[str, Any]:
             self.call_count += 1
 
             # Fail for first 10 calls to trigger circuit breaker
@@ -431,8 +426,8 @@ async def test_circuit_breaker_resilience():
         # Circuit breaker should prevent most failures after initial threshold
         service_call_ratio = failing_service.call_count / 50  # Should be much less than 1.0
 
-        logger.info(f"Circuit Breaker Results:")
-        logger.info(f"  Total requests: 50")
+        logger.info("Circuit Breaker Results:")
+        logger.info("  Total requests: 50")
         logger.info(f"  Service calls made: {failing_service.call_count}")
         logger.info(f"  Service call ratio: {service_call_ratio:.1%}")
         logger.info(f"  Successful results: {len(successful_results)}")
@@ -502,17 +497,17 @@ async def test_comprehensive_performance_comparison():
     avg_throughput_improvement = statistics.mean([r["throughput_improvement"] for r in results_summary])
     avg_resource_efficiency = statistics.mean([r["resource_efficiency"] for r in results_summary])
 
-    print(f"\n📊 Overall Performance Summary:")
+    print("\n📊 Overall Performance Summary:")
     print(f"  Average latency improvement: {avg_latency_improvement:.1%} (Target: ≥40%)")
     print(f"  Average throughput improvement: {avg_throughput_improvement:.1f}x (Target: ≥2.0x)")
     print(f"  Average resource efficiency: {avg_resource_efficiency:.1%} (Target: ≥20%)")
 
     # Verify overall targets
-    assert avg_latency_improvement >= 0.30, f"Average latency improvement below target"
-    assert avg_throughput_improvement >= 1.8, f"Average throughput improvement below target"
-    assert avg_resource_efficiency >= 0.15, f"Average resource efficiency below target"
+    assert avg_latency_improvement >= 0.30, "Average latency improvement below target"
+    assert avg_throughput_improvement >= 1.8, "Average throughput improvement below target"
+    assert avg_resource_efficiency >= 0.15, "Average resource efficiency below target"
 
-    print(f"\n✅ All performance targets exceeded!")
+    print("\n✅ All performance targets exceeded!")
 
 
 if __name__ == "__main__":
@@ -526,6 +521,6 @@ if __name__ == "__main__":
         await test_circuit_breaker_resilience()
         await test_comprehensive_performance_comparison()
 
-        print(f"\n🎯 All benchmarks completed successfully!")
+        print("\n🎯 All benchmarks completed successfully!")
 
     asyncio.run(main())
