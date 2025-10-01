@@ -157,6 +157,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "performance: marks tests as performance tests",
+    "benchmark: marks tests as benchmark tests",
 ]
 
 [tool.coverage.run]
