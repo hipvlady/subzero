@@ -160,6 +160,18 @@ class GatewayOrchestrator:
         # 7. Adaptive Cache
         await self._register_adaptive_cache()
 
+        # 8. Hierarchical Timing Wheels
+        await self._register_timing_wheels()
+
+        # 9. Work-Stealing Pool
+        await self._register_work_stealing_pool()
+
+        # 10. Adaptive Batcher
+        await self._register_adaptive_batcher()
+
+        # 11. B+ Tree Index
+        await self._register_bplus_tree_index()
+
     async def _register_shared_memory_cache(self):
         """Register shared memory cache with fallback to dict"""
 
@@ -491,6 +503,74 @@ class GatewayOrchestrator:
                 name for name, comp in report["components"].items() if comp["status"] == "unavailable"
             ],
         }
+
+    async def _register_timing_wheels(self):
+        """Register hierarchical timing wheels for O(1) expiry"""
+        from subzero.services.cache.timing_wheels import get_timing_wheels
+
+        timing_wheels = get_timing_wheels()
+
+        async def check_health():
+            return timing_wheels.is_running
+
+        await self.registry.register(
+            name="timing_wheels",
+            category=ComponentCategory.OPTIMIZATION,
+            version="1.0.0",
+            instance=timing_wheels,
+            health_check=check_health,
+        )
+
+        # Start timing wheels
+        await timing_wheels.start()
+
+    async def _register_work_stealing_pool(self):
+        """Register work-stealing thread pool"""
+        from subzero.services.concurrency.work_stealing import get_work_stealing_pool
+
+        pool = get_work_stealing_pool()
+
+        async def check_health():
+            return pool.is_running
+
+        await self.registry.register(
+            name="work_stealing_pool",
+            category=ComponentCategory.OPTIMIZATION,
+            version="1.0.0",
+            instance=pool,
+            health_check=check_health,
+        )
+
+        # Start pool
+        await pool.start()
+
+    async def _register_adaptive_batcher(self):
+        """Register adaptive batching system"""
+        from subzero.services.concurrency.adaptive_batching import get_multi_batcher
+
+        batcher = get_multi_batcher()
+
+        await self.registry.register(
+            name="adaptive_batcher",
+            category=ComponentCategory.OPTIMIZATION,
+            version="1.0.0",
+            instance=batcher,
+            health_check=lambda: True,
+        )
+
+    async def _register_bplus_tree_index(self):
+        """Register B+ tree permission index"""
+        from subzero.services.cache.bplus_tree import get_hierarchical_index
+
+        index = get_hierarchical_index()
+
+        await self.registry.register(
+            name="bplus_tree_index",
+            category=ComponentCategory.OPTIMIZATION,
+            version="1.0.0",
+            instance=index,
+            health_check=lambda: True,
+        )
 
     async def shutdown(self):
         """Graceful shutdown"""
