@@ -17,16 +17,11 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src"))
 
-# NOTE: These tests reference old module structure (auth.*)
-# The modules need to be refactored or recreated under subzero.services.auth
-# Temporarily disabled until module structure is updated
-pytest.skip("Module needs to be migrated to new package structure", allow_module_level=True)
-
-# from subzero.services.auth.cuckoo_cache import CuckooCache
-# from subzero.services.auth.eddsa_key_manager import EdDSAKeyManager
-# from subzero.services.auth.high_performance_auth import HighPerformanceAuthenticator
-# from subzero.services.auth.simd_operations import SIMDHasher, benchmark_hash_functions, simd_xxhash64
-# from subzero.services.auth.token_pool import AdaptiveTokenPool, TokenPool
+from subzero.services.auth.cuckoo_cache import CuckooCache
+from subzero.services.auth.eddsa_key_manager import EdDSAKeyManager
+from subzero.services.auth.high_performance_auth import HighPerformanceAuthenticator
+from subzero.services.auth.simd_operations import SIMDHasher, benchmark_hash_functions, simd_xxhash64
+from subzero.services.auth.token_pool import AdaptiveTokenPool, TokenPool
 
 
 class TestEdDSAPerformance:

@@ -38,18 +38,13 @@ import pytest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# NOTE: These tests reference old module structure (src.performance.cpu_bound_multiprocessing)
-# The module needs to be refactored or recreated under subzero.services.orchestrator
-# Temporarily disabled until module structure is updated
-pytest.skip("Module needs to be migrated to new package structure", allow_module_level=True)
-
-# from subzero.services.orchestrator.multiprocessing import (
-#     CPUBoundProcessor,
-#     _calculate_analytics_sync,
-#     _cleanup_cache_sync,
-#     _generate_coalescing_key_sync,
-#     _match_patterns_sync,
-# )
+from subzero.services.orchestrator.cpu_bound_multiprocessing import (
+    CPUBoundProcessor,
+    _calculate_analytics_sync,
+    _cleanup_cache_sync,
+    _generate_coalescing_key_sync,
+    _match_patterns_sync,
+)
 
 logger = logging.getLogger(__name__)
 

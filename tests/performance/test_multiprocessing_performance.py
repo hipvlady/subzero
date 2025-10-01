@@ -19,16 +19,17 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../src"))
 
-# NOTE: These tests reference old module structure (auth.*, performance.*)
-# The modules need to be refactored or recreated under subzero package
-# Temporarily disabled until module structure is updated
-pytest.skip("Module needs to be migrated to new package structure", allow_module_level=True)
+# NOTE: Some high-performance multiprocessing modules need additional implementation
+# Tests marked as xfail until modules are fully implemented
+# Working modules: high_performance_auth, eddsa_key_manager, cuckoo_cache
 
 # from subzero.services.auth.distributed_cache import DistributedCacheManager
-# from subzero.services.auth.high_performance_auth import HighPerformanceAuthenticator
+from subzero.services.auth.high_performance_auth import HighPerformanceAuthenticator
 # from subzero.services.auth.multiprocess_jwt import MultiProcessJWTProcessor
 # from subzero.services.auth.parallel_hash import ParallelHashComputer
 # from subzero.services.orchestrator.multiprocess_monitor import MultiProcessingObserver
+
+pytestmark = pytest.mark.xfail(reason="Advanced multiprocessing modules need implementation")
 
 
 class MultiprocessingBenchmarks:
