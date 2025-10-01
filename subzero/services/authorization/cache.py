@@ -42,10 +42,38 @@ class CacheEntry:
     cached_at: float
     ttl: int
     metadata: dict = field(default_factory=dict)
+    access_count: int = 0
+    last_access: float = 0.0
 
     def is_expired(self) -> bool:
         """Check if cache entry is expired"""
         return time.time() > (self.cached_at + self.ttl)
+
+    def record_access(self):
+        """Record cache entry access"""
+        self.access_count += 1
+        self.last_access = time.time()
+
+    def get_adaptive_ttl(self, base_ttl: int = 900) -> int:
+        """
+        Calculate adaptive TTL based on access frequency
+
+        Hot entries (frequent access): 2x TTL (30 minutes)
+        Warm entries (normal access): 1x TTL (15 minutes)
+        Cold entries (rare access): 0.5x TTL (7.5 minutes)
+
+        Args:
+            base_ttl: Base TTL in seconds
+
+        Returns:
+            Adaptive TTL in seconds
+        """
+        if self.access_count > 100:  # Hot entry
+            return base_ttl * 2  # 30 minutes
+        elif self.access_count > 10:  # Warm entry
+            return base_ttl  # 15 minutes
+        else:  # Cold entry
+            return base_ttl // 2  # 7.5 minutes
 
 
 @dataclass
@@ -165,6 +193,16 @@ class LRUCache:
                 del self.cache[key]
                 self.misses += 1
                 return None
+
+            # Record access for adaptive TTL
+            entry.record_access()
+
+            # Extend TTL for hot entries (adaptive caching)
+            if entry.access_count % 50 == 0:  # Every 50th access, recalculate TTL
+                adaptive_ttl = entry.get_adaptive_ttl()
+                if adaptive_ttl != entry.ttl:
+                    entry.ttl = adaptive_ttl
+                    entry.cached_at = time.time()  # Reset timer with new TTL
 
             # Move to end (mark as recently used)
             self.cache.move_to_end(key)
@@ -413,7 +451,7 @@ class AuthorizationCache:
         l1_capacity: int = 10000,
         redis_url: str | None = None,
         enable_bloom_filter: bool = True,
-        default_ttl: int = 300,
+        default_ttl: int = 900,
     ):
         """
         Initialize authorization cache
@@ -422,7 +460,7 @@ class AuthorizationCache:
             l1_capacity: L1 cache capacity
             redis_url: Redis URL for L2 cache (optional)
             enable_bloom_filter: Enable Bloom filter for negative caching
-            default_ttl: Default TTL in seconds
+            default_ttl: Default TTL in seconds (default: 900 = 15 minutes)
         """
         # L1 cache (memory)
         self.l1_cache = LRUCache(capacity=l1_capacity)

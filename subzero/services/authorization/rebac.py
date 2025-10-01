@@ -135,7 +135,7 @@ class ReBACEngine:
 
         # Permission cache: (object, relation, subject) -> result
         self.cache: dict[frozenset, tuple[bool, float]] = {}
-        self.cache_ttl = 300  # 5 minutes
+        self.cache_ttl = 900  # 15 minutes (optimized for higher hit ratio)
 
         # Performance metrics
         self.check_count = 0
@@ -492,6 +492,65 @@ class ReBACEngine:
             "cache_hit_rate_percent": cache_hit_rate,
             "cache_size": len(self.cache),
             "object_types": len(self.object_types),
+        }
+
+    async def prewarm_cache(self, common_checks: list[dict]) -> dict:
+        """
+        Pre-warm cache with common authorization checks
+
+        This significantly improves cache hit ratio during startup period
+        by loading frequently accessed permissions into cache
+
+        Args:
+            common_checks: List of common authorization checks
+                          Each dict should have: object_type, object_id, relation, subject_type, subject_id
+
+        Returns:
+            Dictionary with pre-warming statistics
+
+        Example:
+            common_checks = [
+                {
+                    "object_type": "document",
+                    "object_id": "readme",
+                    "relation": "viewer",
+                    "subject_type": "user",
+                    "subject_id": "alice"
+                },
+                # ... more common checks
+            ]
+            stats = await rebac.prewarm_cache(common_checks)
+        """
+        if not common_checks:
+            return {"prewarmed": 0, "errors": 0}
+
+        print(f"🔥 Pre-warming cache with {len(common_checks)} common authorization checks...")
+
+        tasks = []
+        for check in common_checks:
+            task = self.check(
+                check["object_type"],
+                check["object_id"],
+                check["relation"],
+                check["subject_type"],
+                check["subject_id"],
+            )
+            tasks.append(task)
+
+        # Execute all checks in parallel
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Count successes and errors
+        errors = sum(1 for r in results if isinstance(r, Exception))
+        successes = len(results) - errors
+
+        print(f"✅ Pre-warmed cache: {successes} entries loaded, {errors} errors")
+
+        return {
+            "prewarmed": successes,
+            "errors": errors,
+            "cache_size": len(self.cache),
+            "cache_hit_rate_percent": (self.cache_hits / max(self.check_count, 1)) * 100,
         }
 
     async def sync_with_auth0_fga(self) -> bool:
