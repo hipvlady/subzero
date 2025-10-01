@@ -334,8 +334,8 @@ subzero --host 0.0.0.0 --port 8000
 
 ### 2. Docker
 ```bash
-docker pull subzero/gateway:latest
-docker run -d -p 8000:8000 --env-file .env subzero/gateway:latest
+docker pull ghcr.io/vladparakhin/subzero:latest
+docker run -d -p 8000:8000 --env-file .env ghcr.io/vladparakhin/subzero:latest
 ```
 
 ### 3. Docker Compose

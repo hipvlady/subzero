@@ -176,8 +176,8 @@ pip install -e ".[dev]"
 ### Docker Installation
 
 ```bash
-docker pull subzero/gateway:latest
-docker run -d -p 8000:8000 --env-file .env subzero/gateway:latest
+docker pull ghcr.io/vladparakhin/subzero:latest
+docker run -d -p 8000:8000 --env-file .env ghcr.io/vladparakhin/subzero:latest
 ```
 
 ### Docker Compose

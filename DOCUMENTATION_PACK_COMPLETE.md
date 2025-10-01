@@ -592,7 +592,7 @@ ROI (3-Year):            9,192%
 pip install subzero
 
 # Option B: Docker
-docker pull subzero/gateway:latest
+docker pull ghcr.io/vladparakhin/subzero:latest
 
 # Option C: From source
 git clone https://github.com/subzero-dev/subzero.git
@@ -652,7 +652,7 @@ MAX_CONNECTIONS=1000
 subzero --host 0.0.0.0 --port 8000
 
 # Or with Docker
-docker run -d -p 8000:8000 --env-file .env subzero/gateway:latest
+docker run -d -p 8000:8000 --env-file .env ghcr.io/vladparakhin/subzero:latest
 
 # Or with Docker Compose
 docker-compose up -d
