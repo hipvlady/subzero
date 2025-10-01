@@ -12,7 +12,7 @@ import json
 import logging
 import sys
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class StructuredFormatter(logging.Formatter):
@@ -63,7 +63,7 @@ class StructuredFormatter(logging.Formatter):
         str
             JSON-formatted log message
         """
-        log_obj: Dict[str, Any] = {
+        log_obj: dict[str, Any] = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "level": record.levelname,
             "logger": record.name,
@@ -117,7 +117,7 @@ class StructuredFormatter(logging.Formatter):
 def setup_logging(
     log_level: str = "INFO",
     structured: bool = True,
-    audit_log_file: Optional[str] = None,
+    audit_log_file: str | None = None,
 ) -> None:
     """
     Configure production logging.
@@ -176,7 +176,7 @@ def setup_logging(
             file_handler.setFormatter(StructuredFormatter())
             file_handler.setLevel(logging.INFO)  # Always INFO for audit
             root_logger.addHandler(file_handler)
-        except (IOError, OSError) as e:
+        except OSError as e:
             root_logger.warning(f"Could not create audit log file: {e}")
 
 
@@ -214,7 +214,7 @@ class RequestLogger:
         request_id: str,
         method: str,
         path: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ):
         """Initialize request logger context."""
         self.logger = logger
@@ -222,7 +222,7 @@ class RequestLogger:
         self.method = method
         self.path = path
         self.user_id = user_id
-        self.start_time: Optional[float] = None
+        self.start_time: float | None = None
 
     def __enter__(self):
         """Log request start."""

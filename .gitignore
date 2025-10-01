@@ -208,3 +208,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Claude Code specific files
+.claude/
+CLAUDE.md
+
+# Archive folder - development artifacts and reports
+archive/
+
+# Hackathon folder - competition materials and presentations
+hackathon/
