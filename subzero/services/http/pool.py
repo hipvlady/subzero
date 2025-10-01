@@ -64,10 +64,19 @@ class HTTPConnectionPool:
             pool=5.0,  # 5s to acquire connection from pool
         )
 
+        # Detect HTTP/2 support
+        http2_enabled = False
+        try:
+            import h2  # noqa: F401
+
+            http2_enabled = True
+        except ImportError:
+            pass
+
         self.httpx_client = httpx.AsyncClient(
             limits=limits,
             timeout=timeout,
-            http2=True,  # Enable HTTP/2 for multiplexing
+            http2=http2_enabled,  # Enable HTTP/2 if h2 package available
             follow_redirects=True,
             verify=True,  # SSL verification
         )
