@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Security Policy
 
 ## Supported Versions
@@ -206,3 +211,7 @@ We currently do not have a bug bounty program, but we deeply appreciate security
 ---
 
 **Last updated**: 2025-09-30
+
+---
+
+**Last updated:** 2025-10-02

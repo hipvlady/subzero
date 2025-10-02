@@ -25,7 +25,48 @@ from openfga_sdk import OpenFgaClient as FgaClient
 
 @dataclass
 class Auth0Configuration:
-    """Complete Auth0 configuration for all services"""
+    """
+    Complete Auth0 configuration for all services.
+
+    Comprehensive configuration dataclass for Auth0 authentication, authorization
+    (FGA), management API, and Token Vault for AI agents.
+
+    Attributes
+    ----------
+    domain : str
+        Auth0 tenant domain (e.g., 'tenant.auth0.com')
+    client_id : str
+        Auth0 client application ID
+    client_secret : str, optional
+        Auth0 client secret. Not required for Private Key JWT.
+    audience : str, default ""
+        API audience/identifier for token validation
+    management_api_token : str, optional
+        Management API access token for user/app operations
+    fga_store_id : str, default ""
+        Auth0 FGA store identifier
+    fga_client_id : str, default ""
+        FGA client ID for authorization operations
+    fga_client_secret : str, default ""
+        FGA client secret
+    fga_api_url : str, default "https://api.us1.fga.dev"
+        FGA API endpoint URL (US or EU region)
+    fga_model_id : str, optional
+        FGA authorization model ID
+    token_vault_endpoint : str, default ""
+        Token Vault API endpoint for AI agent credentials
+    token_vault_api_key : str, default ""
+        Token Vault API key
+
+    Examples
+    --------
+    >>> config = Auth0Configuration(
+    ...     domain="tenant.auth0.com",
+    ...     client_id="your_client_id",
+    ...     audience="https://api.example.com",
+    ...     fga_store_id="01HXXXXXXXXXXXXXXXXXXXXX"
+    ... )
+    """
 
     # Core Auth0 settings
     domain: str
@@ -50,8 +91,53 @@ class Auth0Configuration:
 
 class Auth0IntegrationManager:
     """
-    Complete Auth0 integration manager
-    Handles all Auth0 services with production-ready error handling
+    Complete Auth0 integration manager.
+
+    Comprehensive integration with Auth0 services including authentication
+    (Private Key JWT), authorization (FGA), user management (Management API),
+    and Token Vault for AI agents. Provides production-ready error handling,
+    automatic retry, and connection pooling.
+
+    Parameters
+    ----------
+    config : Auth0Configuration
+        Complete Auth0 configuration with all service credentials
+
+    Attributes
+    ----------
+    config : Auth0Configuration
+        Auth0 configuration instance
+    management_client : Auth0, optional
+        Auth0 Management API client
+    fga_client : OpenFgaClient
+        Auth0 FGA client for authorization
+    http_client : httpx.AsyncClient
+        Async HTTP client for API calls
+    private_key : RSAPrivateKey
+        RSA private key for Private Key JWT
+    public_key : RSAPublicKey
+        RSA public key for JWKS
+
+    Notes
+    -----
+    The manager initializes all Auth0 service clients and generates an RSA
+    key pair for Private Key JWT authentication. HTTP connections are pooled
+    for optimal performance (50 keepalive connections).
+
+    See Also
+    --------
+    Auth0Configuration : Configuration dataclass
+    ResilientAuthService : High-level auth service with retry logic
+
+    Examples
+    --------
+    >>> config = Auth0Configuration(
+    ...     domain="tenant.auth0.com",
+    ...     client_id="client_id",
+    ...     audience="https://api.example.com"
+    ... )
+    >>> manager = Auth0IntegrationManager(config)
+    >>> result = await manager.authenticate_with_private_key_jwt("user_123")
     """
 
     def __init__(self, config: Auth0Configuration):

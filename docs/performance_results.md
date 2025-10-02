@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # High-Performance Authentication Layer - Implementation Results
 
 ## Executive Summary

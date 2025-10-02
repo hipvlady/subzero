@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Auth0 Complete Setup Guide
 ## Zero Trust API Gateway Configuration
 

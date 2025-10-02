@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -131,3 +136,7 @@ When upgrading to 1.0.0, please note the following breaking changes:
 
 [Unreleased]: https://github.com/subzero-dev/subzero/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/subzero-dev/subzero/releases/tag/v0.1.0
+
+---
+
+**Last updated:** 2025-10-02

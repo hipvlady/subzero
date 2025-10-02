@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # API Reference
 
 Complete API reference for Subzero Zero Trust API Gateway.

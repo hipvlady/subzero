@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Performance Benchmarks and Optimization
 
 This document details the performance characteristics, benchmarks, and optimization techniques used in Subzero Zero Trust API Gateway.

@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Performance Tests
 
 ## Current Status (Updated: 2025-10-01)

@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Troubleshooting Guide
 
 Common issues and solutions for Subzero Zero Trust API Gateway.

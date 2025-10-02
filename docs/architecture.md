@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Subzero Architecture
 
 ## System Overview
@@ -450,3 +455,7 @@ See [configuration.md](configuration.md) for details.
 - [Deployment Guide](deployment.md)
 - [Security Policy](../SECURITY.md)
 - [Contributing Guidelines](../CONTRIBUTING.md)
+
+---
+
+**Last updated:** 2025-10-02

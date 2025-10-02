@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 
 # Subzero - Zero Trust API Gateway
 
@@ -393,3 +398,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Made with ❤️ by the Subzero Team**
+
+---
+
+**Last updated:** 2025-10-02

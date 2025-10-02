@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Configuration Guide
 
 This guide covers all configuration options for Subzero Zero Trust API Gateway.
@@ -442,3 +447,7 @@ JWTError: Unable to verify token
 - [Architecture](architecture.md)
 - [Deployment Guide](deployment.md)
 - [Security Policy](../SECURITY.md)
+
+---
+
+**Last updated:** 2025-10-02

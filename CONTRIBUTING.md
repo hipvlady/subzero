@@ -403,3 +403,7 @@ Contributors are recognized in:
 - CONTRIBUTORS file (for significant contributions)
 
 Thank you for contributing to Subzero!
+
+---
+
+**Last updated:** 2025-10-02

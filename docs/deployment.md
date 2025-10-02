@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Deployment Guide
 
 This guide covers deploying Subzero Zero Trust API Gateway in various environments.
@@ -538,3 +543,7 @@ kubectl set image deployment/subzero \
 - [Configuration Guide](configuration.md)
 - [Security Policy](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)
+
+---
+
+**Last updated:** 2025-10-02

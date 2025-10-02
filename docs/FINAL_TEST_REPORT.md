@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Subzero Zero Trust API Gateway - Final Test Report
 
 ## Executive Summary

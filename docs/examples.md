@@ -1,3 +1,8 @@
+<!--
+Copyright (c) Subzero Development Team.
+Distributed under the terms of the Modified BSD License.
+-->
+
 # Code Examples and Usage Patterns
 
 This document provides practical code examples for using Subzero Zero Trust API Gateway.
