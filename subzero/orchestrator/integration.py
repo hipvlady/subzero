@@ -496,9 +496,7 @@ class GatewayOrchestrator:
             "capabilities": report["capabilities"],
             "components": report["components"],
             "summary": report["summary"],
-            "degraded_features": [
-                name for name, comp in report["components"].items() if comp["status"] == "degraded"
-            ],
+            "degraded_features": [name for name, comp in report["components"].items() if comp["status"] == "degraded"],
             "unavailable_features": [
                 name for name, comp in report["components"].items() if comp["status"] == "unavailable"
             ],

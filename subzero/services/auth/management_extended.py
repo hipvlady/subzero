@@ -289,7 +289,7 @@ class ExtendedManagementAPI:
             if criteria.email:
                 query_parts.append(f'email:"{criteria.email}"')
             if criteria.name:
-                query_parts.append(f'name:*{criteria.name}*')
+                query_parts.append(f"name:*{criteria.name}*")
             if criteria.user_id:
                 query_parts.append(f'user_id:"{criteria.user_id}"')
             if criteria.connection:
@@ -442,9 +442,7 @@ class ExtendedManagementAPI:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def setup_log_stream(
-        self, stream_type: str, sink_url: str, filters: dict | None = None
-    ) -> dict[str, Any]:
+    async def setup_log_stream(self, stream_type: str, sink_url: str, filters: dict | None = None) -> dict[str, Any]:
         """
         Configure Auth0 log stream to external service
 
@@ -526,7 +524,9 @@ class ExtendedManagementAPI:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def add_user_to_organization(self, org_id: str, user_id: str, roles: list[str] | None = None) -> dict[str, Any]:
+    async def add_user_to_organization(
+        self, org_id: str, user_id: str, roles: list[str] | None = None
+    ) -> dict[str, Any]:
         """Add user to organization"""
         self.metrics["api_calls"] += 1
 
@@ -590,9 +590,7 @@ class ExtendedManagementAPI:
             if allowlist:
                 config["allowlist"] = allowlist
 
-            response = await self.http_client.patch(
-                "/api/v2/attack-protection/suspicious-ip-throttling", json=config
-            )
+            response = await self.http_client.patch("/api/v2/attack-protection/suspicious-ip-throttling", json=config)
             response.raise_for_status()
 
             return {"success": True, "config": response.json()}

@@ -97,9 +97,7 @@ class TestSharedMemoryIPC:
         # Write tokens
         slots = []
         for i in range(100):
-            slot = cache.write_token(
-                user_id=i, token_hash=123456789 + i, expires_at=time.time() + 3600, scopes={0, 1}
-            )
+            slot = cache.write_token(user_id=i, token_hash=123456789 + i, expires_at=time.time() + 3600, scopes={0, 1})
             slots.append(slot)
 
         # Batch read (vectorized, zero-copy)

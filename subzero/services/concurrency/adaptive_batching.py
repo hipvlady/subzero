@@ -132,9 +132,7 @@ class UCBBatchSelector:
                 else:
                     # UCB formula: avg_reward + exploration_bonus
                     avg_reward = self.arm_avg_rewards[i]
-                    exploration_bonus = exploration_factor * math.sqrt(
-                        math.log(self.total_pulls) / self.arm_counts[i]
-                    )
+                    exploration_bonus = exploration_factor * math.sqrt(math.log(self.total_pulls) / self.arm_counts[i])
                     ucb_values[i] = avg_reward + exploration_bonus
 
             arm_idx = int(np.argmax(ucb_values))
@@ -197,9 +195,7 @@ class AdaptiveBatcher(Generic[T]):
 
         # ML components
         self.ewma_predictor = EWMAPredictor(alpha=0.2)
-        self.ucb_selector = UCBBatchSelector(
-            min_batch=min_batch_size, max_batch=max_batch_size, num_arms=10
-        )
+        self.ucb_selector = UCBBatchSelector(min_batch=min_batch_size, max_batch=max_batch_size, num_arms=10)
 
         # Current batch size (adaptive)
         self.current_batch_size = min_batch_size

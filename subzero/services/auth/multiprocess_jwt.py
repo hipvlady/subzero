@@ -124,19 +124,14 @@ class MultiProcessJWTProcessor:
 
         # Split payloads across workers
         chunk_size = max(1, len(payloads) // self.num_workers)
-        chunks = [payloads[i:i + chunk_size] for i in range(0, len(payloads), chunk_size)]
+        chunks = [payloads[i : i + chunk_size] for i in range(0, len(payloads), chunk_size)]
 
         # Submit to process pool
         loop = asyncio.get_event_loop()
         tasks = []
 
         for chunk in chunks:
-            task = loop.run_in_executor(
-                self.executor,
-                _sign_jwt_batch_worker,
-                chunk,
-                self.private_key_pem
-            )
+            task = loop.run_in_executor(self.executor, _sign_jwt_batch_worker, chunk, self.private_key_pem)
             tasks.append(task)
 
         # Gather results
@@ -171,19 +166,14 @@ class MultiProcessJWTProcessor:
 
         # Split tokens across workers
         chunk_size = max(1, len(tokens) // self.num_workers)
-        chunks = [tokens[i:i + chunk_size] for i in range(0, len(tokens), chunk_size)]
+        chunks = [tokens[i : i + chunk_size] for i in range(0, len(tokens), chunk_size)]
 
         # Submit to process pool
         loop = asyncio.get_event_loop()
         tasks = []
 
         for chunk in chunks:
-            task = loop.run_in_executor(
-                self.executor,
-                _verify_jwt_batch_worker,
-                chunk,
-                self.public_key_pem
-            )
+            task = loop.run_in_executor(self.executor, _verify_jwt_batch_worker, chunk, self.public_key_pem)
             tasks.append(task)
 
         # Gather results
@@ -204,9 +194,7 @@ class MultiProcessJWTProcessor:
     def get_stats(self) -> dict[str, Any]:
         """Get processor statistics"""
         avg_sign_time = (
-            self.stats["total_time_signing"] / self.stats["total_signed"]
-            if self.stats["total_signed"] > 0
-            else 0.0
+            self.stats["total_time_signing"] / self.stats["total_signed"] if self.stats["total_signed"] > 0 else 0.0
         )
         avg_verify_time = (
             self.stats["total_time_verifying"] / self.stats["total_verified"]

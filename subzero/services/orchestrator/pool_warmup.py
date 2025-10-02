@@ -36,6 +36,7 @@ import numpy as np
 
 try:
     from numba import jit
+
     NUMBA_AVAILABLE = True
 except ImportError:
     NUMBA_AVAILABLE = False
@@ -103,6 +104,7 @@ def _warmup_numba_jit():
         return "Numba not available"
 
     try:
+
         @jit(nopython=True, cache=True)
         def warmup_function(x):
             """Dummy function for JIT warmup"""

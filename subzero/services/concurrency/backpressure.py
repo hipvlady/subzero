@@ -156,9 +156,7 @@ class AdaptiveSemaphore:
         await self.semaphore.acquire()
 
         self.metrics.current_concurrent += 1
-        self.metrics.max_concurrent_reached = max(
-            self.metrics.max_concurrent_reached, self.metrics.current_concurrent
-        )
+        self.metrics.max_concurrent_reached = max(self.metrics.max_concurrent_reached, self.metrics.current_concurrent)
 
         return self
 
@@ -354,9 +352,7 @@ class BackpressureManager:
 
         return self.services[service_name]
 
-    async def execute_with_backpressure(
-        self, service_name: str, coro_func: Callable, *args, **kwargs
-    ) -> Any:
+    async def execute_with_backpressure(self, service_name: str, coro_func: Callable, *args, **kwargs) -> Any:
         """
         Execute coroutine with automatic backpressure and latency tracking
 

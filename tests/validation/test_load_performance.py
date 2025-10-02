@@ -37,24 +37,19 @@ class TestRPSThroughput:
             "access_token": "mock_token_12345",
             "token_type": "Bearer",
             "expires_in": 3600,
-            "scope": "openid profile"
+            "scope": "openid profile",
         }
 
         # Create provider with mocked dependencies
         provider = MCPOAuthProvider(
-            auth0_domain="test.auth0.com",
-            auth0_client_id="test_client",
-            auth0_client_secret="test_secret"
+            auth0_domain="test.auth0.com", auth0_client_id="test_client", auth0_client_secret="test_secret"
         )
 
         # Mock HTTP client
-        with patch.object(provider.http_client, 'post', return_value=mock_response):
+        with patch.object(provider.http_client, "post", return_value=mock_response):
             # Warm up
             for _ in range(100):
-                await provider.register_dynamic_client({
-                    "agent_id": f"warmup_agent",
-                    "client_name": "Warmup"
-                })
+                await provider.register_dynamic_client({"agent_id": f"warmup_agent", "client_name": "Warmup"})
 
             # Measure throughput
             start_time = time.perf_counter()
@@ -68,10 +63,9 @@ class TestRPSThroughput:
                 # Batch of 100 concurrent requests
                 tasks = []
                 for i in range(100):
-                    task = provider.register_dynamic_client({
-                        "agent_id": f"agent_{request_count + i}",
-                        "client_name": f"Test Agent {request_count + i}"
-                    })
+                    task = provider.register_dynamic_client(
+                        {"agent_id": f"agent_{request_count + i}", "client_name": f"Test Agent {request_count + i}"}
+                    )
                     tasks.append(task)
 
                 await asyncio.gather(*tasks)
@@ -106,9 +100,7 @@ class TestRPSThroughput:
 
         # Pre-populate with test data
         for i in range(1000):
-            rebac.write_tuple(
-                AuthzTuple("doc", f"doc_{i}", "viewer", "user", f"user_{i % 100}")
-            )
+            rebac.write_tuple(AuthzTuple("doc", f"doc_{i}", "viewer", "user", f"user_{i % 100}"))
 
         # Warm up cache
         for i in range(100):
@@ -167,11 +159,7 @@ class TestEndToEndLatency:
         from subzero.services.security.llm_security import LLMSecurityGuard
 
         # Setup components
-        oauth = MCPOAuthProvider(
-            auth0_domain="test.auth0.com",
-            auth0_client_id="test",
-            auth0_client_secret="test"
-        )
+        oauth = MCPOAuthProvider(auth0_domain="test.auth0.com", auth0_client_id="test", auth0_client_secret="test")
 
         rebac = ReBACEngine()
         rebac.write_tuple(AuthzTuple("api", "resource1", "viewer", "user", "alice"))
@@ -189,19 +177,14 @@ class TestEndToEndLatency:
             start = time.perf_counter()
 
             # 1. Validate token (mocked)
-            with patch.object(oauth, '_validate_token', return_value=mock_token_info):
+            with patch.object(oauth, "_validate_token", return_value=mock_token_info):
                 token_valid = await oauth._validate_token("mock_token")
 
             # 2. ReBAC check
             rebac_ok = await rebac.check("api", "resource1", "viewer", "user", "alice")
 
             # 3. ABAC evaluation
-            context = AuthorizationContext(
-                user_id="alice",
-                user_role="user",
-                resource_id="resource1",
-                action="read"
-            )
+            context = AuthorizationContext(user_id="alice", user_role="user", resource_id="resource1", action="read")
             abac_result = await abac.evaluate(context)
 
             # 4. LLM security check
@@ -288,9 +271,7 @@ class TestCacheHitRatio:
         # Create dataset: 1000 resources, 100 users
         # Most access will be to top 20% of resources (Pareto principle)
         for i in range(1000):
-            rebac.write_tuple(
-                AuthzTuple("doc", f"doc_{i}", "viewer", "user", f"user_{i % 100}")
-            )
+            rebac.write_tuple(AuthzTuple("doc", f"doc_{i}", "viewer", "user", f"user_{i % 100}"))
 
         # Warm up cache with popular resources (20%)
         popular_docs = list(range(200))  # Top 20%
@@ -351,29 +332,20 @@ class TestConcurrentLoad:
         """
         from subzero.services.mcp.oauth import MCPOAuthProvider
 
-        provider = MCPOAuthProvider(
-            auth0_domain="test.auth0.com",
-            auth0_client_id="test",
-            auth0_client_secret="test"
-        )
+        provider = MCPOAuthProvider(auth0_domain="test.auth0.com", auth0_client_id="test", auth0_client_secret="test")
 
         # Mock HTTP responses
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "access_token": "token",
-            "token_type": "Bearer",
-            "expires_in": 3600
-        }
+        mock_response.json.return_value = {"access_token": "token", "token_type": "Bearer", "expires_in": 3600}
 
-        with patch.object(provider.http_client, 'post', return_value=mock_response):
+        with patch.object(provider.http_client, "post", return_value=mock_response):
             # Create 1000 concurrent requests
             tasks = []
             for i in range(1000):
-                task = provider.register_dynamic_client({
-                    "agent_id": f"concurrent_agent_{i}",
-                    "client_name": f"Agent {i}"
-                })
+                task = provider.register_dynamic_client(
+                    {"agent_id": f"concurrent_agent_{i}", "client_name": f"Agent {i}"}
+                )
                 tasks.append(task)
 
             start = time.perf_counter()

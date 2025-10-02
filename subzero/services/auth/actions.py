@@ -124,9 +124,7 @@ class Auth0ActionsManager:
         )
 
         # Action handlers registry
-        self.action_handlers: dict[ActionTrigger, list[Callable]] = {
-            trigger: [] for trigger in ActionTrigger
-        }
+        self.action_handlers: dict[ActionTrigger, list[Callable]] = {trigger: [] for trigger in ActionTrigger}
 
         # Performance metrics
         self.metrics = {
@@ -217,9 +215,7 @@ class Auth0ActionsManager:
             if user.get("user_metadata", {}).get("is_agent"):
                 result.access_token["agent_id"] = user.get("user_metadata", {}).get("agent_id")
                 result.access_token["agent_type"] = user.get("user_metadata", {}).get("agent_type")
-                result.access_token["agent_capabilities"] = user.get("app_metadata", {}).get(
-                    "capabilities", []
-                )
+                result.access_token["agent_capabilities"] = user.get("app_metadata", {}).get("capabilities", [])
 
             # Add organization/tenant context
             result.access_token["org_id"] = user.get("app_metadata", {}).get("org_id")
@@ -636,12 +632,12 @@ class Auth0ActionsManager:
         import uuid
 
         event_type_map = {
-            ActionTrigger.POST_LOGIN: AuditEventType.AUTH_SUCCESS
-            if status == ActionStatus.SUCCESS
-            else AuditEventType.AUTH_FAILURE,
-            ActionTrigger.PRE_USER_REGISTRATION: AuditEventType.SECURITY_VIOLATION
-            if status == ActionStatus.FAILURE
-            else AuditEventType.AUTH_SUCCESS,
+            ActionTrigger.POST_LOGIN: (
+                AuditEventType.AUTH_SUCCESS if status == ActionStatus.SUCCESS else AuditEventType.AUTH_FAILURE
+            ),
+            ActionTrigger.PRE_USER_REGISTRATION: (
+                AuditEventType.SECURITY_VIOLATION if status == ActionStatus.FAILURE else AuditEventType.AUTH_SUCCESS
+            ),
             ActionTrigger.POST_USER_REGISTRATION: AuditEventType.AGENT_REGISTERED,
             ActionTrigger.CREDENTIALS_EXCHANGE: AuditEventType.AUTH_SUCCESS,
         }
@@ -675,9 +671,7 @@ class Auth0ActionsManager:
             "actions_failed": self.metrics["actions_failed"],
             "success_rate": self.metrics["actions_succeeded"] / max(self.metrics["actions_executed"], 1),
             "avg_execution_time_ms": avg_time,
-            "registered_handlers": {
-                trigger.value: len(handlers) for trigger, handlers in self.action_handlers.items()
-            },
+            "registered_handlers": {trigger.value: len(handlers) for trigger, handlers in self.action_handlers.items()},
         }
 
     async def close(self):

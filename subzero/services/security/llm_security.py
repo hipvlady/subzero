@@ -402,9 +402,7 @@ class LLMSecurityGuard:
             self.agent_request_counts[agent_id] = []
 
         # Clean old requests (older than 1 minute)
-        self.agent_request_counts[agent_id] = [
-            t for t in self.agent_request_counts[agent_id] if current_time - t < 60
-        ]
+        self.agent_request_counts[agent_id] = [t for t in self.agent_request_counts[agent_id] if current_time - t < 60]
 
         # Check request count
         request_count = len(self.agent_request_counts[agent_id])
@@ -563,7 +561,9 @@ class LLMSecurityGuard:
 
         # Detect suspicious patterns
         recent_accesses = [
-            log for log in self.model_access_log if log["agent_id"] == agent_id and time.time() - log["timestamp"] < 3600
+            log
+            for log in self.model_access_log
+            if log["agent_id"] == agent_id and time.time() - log["timestamp"] < 3600
         ]
 
         # Alert on excessive querying (potential model extraction)

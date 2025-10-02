@@ -190,9 +190,7 @@ class TestAdaptiveBatching:
             processed_batches.append(len(items))
             await asyncio.sleep(0.01)
 
-        batcher = AdaptiveBatcher(
-            batch_processor=process_batch, min_batch_size=5, max_batch_size=20, max_wait_ms=50
-        )
+        batcher = AdaptiveBatcher(batch_processor=process_batch, min_batch_size=5, max_batch_size=20, max_wait_ms=50)
 
         await batcher.start()
 

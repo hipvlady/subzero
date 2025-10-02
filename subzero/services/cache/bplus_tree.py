@@ -173,9 +173,7 @@ class BPlusTreeNode:
             idx = bisect.bisect_right(self.keys, key)
             return self.children[idx].search(key)
 
-    def range_search(
-        self, start_key: Tuple[int, int], end_key: Tuple[int, int]
-    ) -> list[PermissionEntry]:
+    def range_search(self, start_key: Tuple[int, int], end_key: Tuple[int, int]) -> list[PermissionEntry]:
         """
         Range query from start_key to end_key (inclusive)
 
@@ -252,9 +250,7 @@ class BPlusTreeIndex:
             ttl: Time to live
         """
         key = (user_id, resource_id)
-        entry = PermissionEntry(
-            user_id=user_id, resource_id=resource_id, permission=permission, value=value, ttl=ttl
-        )
+        entry = PermissionEntry(user_id=user_id, resource_id=resource_id, permission=permission, value=value, ttl=ttl)
 
         # Insert into tree
         new_root = self.root.insert_key(key, entry)
@@ -286,9 +282,7 @@ class BPlusTreeIndex:
         self.stats["total_searches"] += 1
         return self.root.search(key)
 
-    def range_query(
-        self, user_id: int, resource_id_start: int, resource_id_end: int
-    ) -> list[PermissionEntry]:
+    def range_query(self, user_id: int, resource_id_start: int, resource_id_end: int) -> list[PermissionEntry]:
         """
         Range query for user's resources
 
@@ -384,9 +378,7 @@ class HierarchicalPermissionIndex:
         self.wildcard_cache_hits = 0
         self.wildcard_cache_misses = 0
 
-    def grant_permission(
-        self, user_id: int, resource_id: int, permission: str, value: Any = True, ttl: float = 3600.0
-    ):
+    def grant_permission(self, user_id: int, resource_id: int, permission: str, value: Any = True, ttl: float = 3600.0):
         """
         Grant permission to user for resource
 

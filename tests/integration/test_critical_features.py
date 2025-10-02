@@ -203,15 +203,11 @@ class TestOWASPLLMSecurity:
         ]
 
         for malicious_input in injection_inputs:
-            result = security_guard.validate_input(
-                agent_id="test_agent", user_input=malicious_input
-            )
+            result = security_guard.validate_input(agent_id="test_agent", user_input=malicious_input)
 
             assert result.is_safe is False
             assert len(result.violations) > 0
-            assert any(
-                v.threat_type == LLMThreatType.PROMPT_INJECTION for v in result.violations
-            )
+            assert any(v.threat_type == LLMThreatType.PROMPT_INJECTION for v in result.violations)
 
         assert security_guard.metrics["prompt_injections_blocked"] >= len(injection_inputs)
 
@@ -229,9 +225,7 @@ class TestOWASPLLMSecurity:
             result = security_guard.validate_input(agent_id="test_agent", user_input=pii_input)
 
             assert len(result.violations) > 0
-            assert any(
-                v.threat_type == LLMThreatType.INFO_DISCLOSURE for v in result.violations
-            )
+            assert any(v.threat_type == LLMThreatType.INFO_DISCLOSURE for v in result.violations)
             assert "[REDACTED" in result.sanitized_input
 
         assert security_guard.metrics["pii_detections"] >= len(pii_inputs)
@@ -246,9 +240,7 @@ class TestOWASPLLMSecurity:
         ]
 
         for dangerous_output in dangerous_outputs:
-            result = security_guard.validate_output(
-                agent_id="test_agent", llm_output=dangerous_output
-            )
+            result = security_guard.validate_output(agent_id="test_agent", llm_output=dangerous_output)
 
             assert result.is_safe is False
             assert len(result.violations) > 0
@@ -276,9 +268,7 @@ class TestOWASPLLMSecurity:
         agent_id = "test_agent_limited"
 
         # Register limited capabilities
-        security_guard.register_agent_capabilities(
-            agent_id, capabilities=["read:files", "read:database"]
-        )
+        security_guard.register_agent_capabilities(agent_id, capabilities=["read:files", "read:database"])
 
         # Allowed action
         result = security_guard.authorize_action(agent_id, "read:files")
@@ -296,9 +286,7 @@ class TestOWASPLLMSecurity:
 
         # Simulate excessive model access
         for i in range(150):
-            security_guard.log_model_access(
-                agent_id=agent_id, model_id=model_id, operation="query"
-            )
+            security_guard.log_model_access(agent_id=agent_id, model_id=model_id, operation="query")
 
         # Should detect suspicious pattern
         assert len(security_guard.model_access_log) == 150
@@ -344,9 +332,7 @@ class TestReBACAuthorization:
     async def test_inherited_permissions(self, rebac_engine):
         """Test permission inheritance (owner -> editor -> viewer)"""
         # alice is owner
-        rebac_engine.write_tuple(
-            AuthzTuple("document", "readme", "owner", "user", "alice")
-        )
+        rebac_engine.write_tuple(AuthzTuple("document", "readme", "owner", "user", "alice"))
 
         # Owners should also be editors and viewers
         is_editor = await rebac_engine.check("document", "readme", "editor", "user", "alice")
@@ -362,14 +348,10 @@ class TestReBACAuthorization:
         rebac_engine.write_tuple(AuthzTuple("team", "eng_team", "member", "user", "bob"))
 
         # eng_team has viewer access to document
-        rebac_engine.write_tuple(
-            AuthzTuple("document", "readme", "viewer", "team", "eng_team")
-        )
+        rebac_engine.write_tuple(AuthzTuple("document", "readme", "viewer", "team", "eng_team"))
 
         # bob should have viewer access through team membership
-        has_access = await rebac_engine.check(
-            "document", "readme", "viewer", "user", "bob"
-        )
+        has_access = await rebac_engine.check("document", "readme", "viewer", "user", "bob")
 
         assert has_access is True
 
@@ -378,9 +360,7 @@ class TestReBACAuthorization:
         """Test batch authorization checks for performance"""
         # Setup multiple relationships
         for i in range(10):
-            rebac_engine.write_tuple(
-                AuthzTuple("document", f"doc_{i}", "viewer", "user", "alice")
-            )
+            rebac_engine.write_tuple(AuthzTuple("document", f"doc_{i}", "viewer", "user", "alice"))
 
         # Batch check
         checks = [
@@ -524,9 +504,7 @@ class TestEndToEndIntegration:
 
         # 2. LLM Security: Validate input
         security_guard = LLMSecurityGuard()
-        security_guard.register_agent_capabilities(
-            "integration_test_agent", ["read:data", "write:data"]
-        )
+        security_guard.register_agent_capabilities("integration_test_agent", ["read:data", "write:data"])
 
         input_validation = security_guard.validate_input(
             agent_id="integration_test_agent",
@@ -537,13 +515,9 @@ class TestEndToEndIntegration:
 
         # 3. ReBAC: Check relationship-based permissions
         rebac = ReBACEngine()
-        rebac.write_tuple(
-            AuthzTuple("document", "public_doc", "viewer", "agent", "integration_test_agent")
-        )
+        rebac.write_tuple(AuthzTuple("document", "public_doc", "viewer", "agent", "integration_test_agent"))
 
-        rebac_allowed = await rebac.check(
-            "document", "public_doc", "viewer", "agent", "integration_test_agent"
-        )
+        rebac_allowed = await rebac.check("document", "public_doc", "viewer", "agent", "integration_test_agent")
 
         assert rebac_allowed is True
 

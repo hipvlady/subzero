@@ -233,11 +233,7 @@ class TokenPool:
             self.stats["precomputed"] += 1
 
     async def get_token(
-        self,
-        user_id: str,
-        client_id: str,
-        audience: str,
-        scopes: set[str] | None = None
+        self, user_id: str, client_id: str, audience: str, scopes: set[str] | None = None
     ) -> str | None:
         """
         Get token from pool (with precomputation support)

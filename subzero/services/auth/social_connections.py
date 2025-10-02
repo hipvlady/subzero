@@ -312,7 +312,12 @@ class SocialConnectionManager:
         )
 
     async def _audit_event(
-        self, event_type: AuditEventType, actor_id: str, action: str, metadata: dict, severity: AuditSeverity = AuditSeverity.INFO
+        self,
+        event_type: AuditEventType,
+        actor_id: str,
+        action: str,
+        metadata: dict,
+        severity: AuditSeverity = AuditSeverity.INFO,
     ):
         """Log audit event"""
         if not self.audit_service:

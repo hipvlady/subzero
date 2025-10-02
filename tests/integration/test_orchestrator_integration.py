@@ -170,9 +170,7 @@ class TestGatewayOrchestration:
             if hasattr(cache, "write_token"):
                 import time
 
-                slot = cache.write_token(
-                    user_id=123, token_hash=456789, expires_at=time.time() + 3600, scopes={0, 1}
-                )
+                slot = cache.write_token(user_id=123, token_hash=456789, expires_at=time.time() + 3600, scopes={0, 1})
                 token_data = cache.read_token(slot)
 
                 assert token_data is not None

@@ -328,9 +328,7 @@ class MCPDiscoveryService:
         # Filter capabilities by type
         filtered_caps = self.capabilities
         if capability_type:
-            filtered_caps = {
-                name: cap for name, cap in self.capabilities.items() if cap.type == capability_type
-            }
+            filtered_caps = {name: cap for name, cap in self.capabilities.items() if cap.type == capability_type}
 
         return {
             "protocol": "MCP",

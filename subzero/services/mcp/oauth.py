@@ -254,9 +254,7 @@ class MCPOAuthProvider:
                 return token_response
 
             # For interactive flows, return authorization URL
-            auth_url = self._build_authorization_url(
-                client_id=client_id, scopes=scopes, pkce_challenge=pkce_challenge
-            )
+            auth_url = self._build_authorization_url(client_id=client_id, scopes=scopes, pkce_challenge=pkce_challenge)
 
             return {
                 "success": True,
@@ -440,9 +438,7 @@ class MCPOAuthProvider:
                 "app_type": "non_interactive" if client.client_type == ClientType.AGENT else "regular_web",
                 "grant_types": client.grant_types,
                 "callbacks": client.redirect_uris,
-                "token_endpoint_auth_method": "client_secret_post"
-                if client.client_secret
-                else "none",
+                "token_endpoint_auth_method": "client_secret_post" if client.client_secret else "none",
                 "client_metadata": {"agent_id": client.agent_id, **client.metadata},
             }
 
@@ -593,9 +589,7 @@ class MCPOAuthProvider:
         challenge_bytes = hashlib.sha256(code_verifier.encode("utf-8")).digest()
         code_challenge = base64.urlsafe_b64encode(challenge_bytes).decode("utf-8").rstrip("=")
 
-        return PKCEChallenge(
-            code_verifier=code_verifier, code_challenge=code_challenge, code_challenge_method="S256"
-        )
+        return PKCEChallenge(code_verifier=code_verifier, code_challenge=code_challenge, code_challenge_method="S256")
 
     def _build_authorization_url(
         self, client_id: str, scopes: list[str], pkce_challenge: PKCEChallenge | None = None
@@ -614,9 +608,11 @@ class MCPOAuthProvider:
         params = {
             "response_type": "code",
             "client_id": client_id,
-            "redirect_uri": self.registered_clients[client_id].redirect_uris[0]
-            if self.registered_clients[client_id].redirect_uris
-            else "",
+            "redirect_uri": (
+                self.registered_clients[client_id].redirect_uris[0]
+                if self.registered_clients[client_id].redirect_uris
+                else ""
+            ),
             "scope": " ".join(scopes),
             "audience": self.audience,
         }
@@ -824,7 +820,9 @@ class MCPOAuthProvider:
     # DPoP - Sender-Constrained Tokens (RFC 9449)
     # ========================================
 
-    def validate_dpop_proof(self, dpop_header: str, http_method: str, http_uri: str, access_token: str | None = None) -> dict[str, Any]:
+    def validate_dpop_proof(
+        self, dpop_header: str, http_method: str, http_uri: str, access_token: str | None = None
+    ) -> dict[str, Any]:
         """
         Validate DPoP proof JWT for sender-constrained tokens
 
@@ -864,7 +862,10 @@ class MCPOAuthProvider:
 
             # Validate HTTP method and URI
             if unverified["htm"] != http_method:
-                return {"valid": False, "error": f"HTTP method mismatch: expected {http_method}, got {unverified['htm']}"}
+                return {
+                    "valid": False,
+                    "error": f"HTTP method mismatch: expected {http_method}, got {unverified['htm']}",
+                }
 
             if unverified["htu"] != http_uri:
                 return {"valid": False, "error": "HTTP URI mismatch"}
@@ -889,9 +890,9 @@ class MCPOAuthProvider:
 
             # Validate access token hash if provided
             if access_token and "ath" in unverified:
-                expected_ath = base64.urlsafe_b64encode(
-                    hashlib.sha256(access_token.encode()).digest()
-                ).decode().rstrip("=")
+                expected_ath = (
+                    base64.urlsafe_b64encode(hashlib.sha256(access_token.encode()).digest()).decode().rstrip("=")
+                )
 
                 if unverified["ath"] != expected_ath:
                     return {"valid": False, "error": "Access token hash mismatch"}

@@ -123,10 +123,7 @@ class DistributedCacheManager:
             # Enforce capacity
             if len(self.cache_dict) > self.capacity:
                 # Remove oldest entry
-                oldest_key = min(
-                    self.cache_dict.keys(),
-                    key=lambda k: self.cache_dict[k].get("created_at", 0)
-                )
+                oldest_key = min(self.cache_dict.keys(), key=lambda k: self.cache_dict[k].get("created_at", 0))
                 del self.cache_dict[oldest_key]
 
         # Set in local cache

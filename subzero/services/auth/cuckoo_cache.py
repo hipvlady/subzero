@@ -36,7 +36,7 @@ class CuckooCache:
         self.max_kicks = 500  # Maximum relocations before resize
 
         # Initialize hash tables
-        self.tables = [{}  for _ in range(num_tables)]
+        self.tables = [{} for _ in range(num_tables)]
         self.keys = [np.zeros(capacity, dtype=np.uint64) for _ in range(num_tables)]
         self.sizes = [0] * num_tables
 

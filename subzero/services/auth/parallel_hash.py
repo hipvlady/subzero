@@ -16,6 +16,7 @@ from typing import Any
 
 try:
     import xxhash
+
     XXHASH_AVAILABLE = True
 except ImportError:
     XXHASH_AVAILABLE = False
@@ -130,19 +131,14 @@ class ParallelHashComputer:
         else:
             # Split data across workers
             chunk_size = max(1, len(data_list) // self.num_workers)
-            chunks = [data_list[i:i + chunk_size] for i in range(0, len(data_list), chunk_size)]
+            chunks = [data_list[i : i + chunk_size] for i in range(0, len(data_list), chunk_size)]
 
             # Submit to process pool
             loop = asyncio.get_event_loop()
             tasks = []
 
             for chunk in chunks:
-                task = loop.run_in_executor(
-                    self.executor,
-                    _hash_data_worker,
-                    chunk,
-                    self.algorithm
-                )
+                task = loop.run_in_executor(self.executor, _hash_data_worker, chunk, self.algorithm)
                 tasks.append(task)
 
             # Gather results
@@ -162,16 +158,14 @@ class ParallelHashComputer:
 
     def get_stats(self) -> dict[str, Any]:
         """Get hash computer statistics"""
-        avg_time = (
-            self.stats["total_time"] / self.stats["total_hashes"]
-            if self.stats["total_hashes"] > 0
-            else 0.0
-        )
+        avg_time = self.stats["total_time"] / self.stats["total_hashes"] if self.stats["total_hashes"] > 0 else 0.0
 
         return {
             **self.stats,
             "avg_hash_time_us": avg_time * 1e6,
-            "throughput_hps": self.stats["total_hashes"] / self.stats["total_time"] if self.stats["total_time"] > 0 else 0,
+            "throughput_hps": (
+                self.stats["total_hashes"] / self.stats["total_time"] if self.stats["total_time"] > 0 else 0
+            ),
             "num_workers": self.num_workers,
             "algorithm": self.algorithm,
         }

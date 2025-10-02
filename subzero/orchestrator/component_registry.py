@@ -400,9 +400,7 @@ class ComponentRegistry:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                await self._log_audit(
-                    f"Health check loop error: {e}", AuditEventType.SYSTEM_ERROR, AuditSeverity.HIGH
-                )
+                await self._log_audit(f"Health check loop error: {e}", AuditEventType.SYSTEM_ERROR, AuditSeverity.HIGH)
 
     def is_available(self, component_name: str) -> bool:
         """

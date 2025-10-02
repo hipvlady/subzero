@@ -388,12 +388,8 @@ class WorkStealingPool:
         """Get pool statistics"""
         return {
             "pool": self.stats,
-            "queues": [
-                {"cpu_id": q.cpu_id, "size": q.size(), "stats": q.stats} for q in self.queues
-            ],
-            "workers": [
-                {"worker_id": w.worker_id, "stats": w.stats} for w in self.workers
-            ],
+            "queues": [{"cpu_id": q.cpu_id, "size": q.size(), "stats": q.stats} for q in self.queues],
+            "workers": [{"worker_id": w.worker_id, "stats": w.stats} for w in self.workers],
             "numa": self.numa_nodes,
         }
 

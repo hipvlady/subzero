@@ -55,12 +55,10 @@ class CPUBoundProcessor:
             if isinstance(c, dict):
                 payloads.append(c)
             else:
-                payloads.append(c.payload if hasattr(c, 'payload') else c)
+                payloads.append(c.payload if hasattr(c, "payload") else c)
 
         # Offload to process pool
-        keys = await loop.run_in_executor(
-            self.executor, _generate_coalescing_keys_batch, payloads
-        )
+        keys = await loop.run_in_executor(self.executor, _generate_coalescing_keys_batch, payloads)
 
         return keys
 

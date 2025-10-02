@@ -18,6 +18,7 @@ import psutil
 @dataclass
 class ProcessMetrics:
     """Metrics for a single process"""
+
     pid: int
     cpu_percent: float
     memory_mb: float
@@ -28,6 +29,7 @@ class ProcessMetrics:
 @dataclass
 class SystemMetrics:
     """System-wide metrics"""
+
     total_cpu_percent: float
     memory_percent: float
     available_memory_mb: float
@@ -162,7 +164,7 @@ class MultiProcessingObserver:
 
         # Trim history
         if len(self.metrics_history) > self.max_history:
-            self.metrics_history = self.metrics_history[-self.max_history:]
+            self.metrics_history = self.metrics_history[-self.max_history :]
 
     def get_current_metrics(self) -> dict[str, Any]:
         """Get current metrics snapshot"""
@@ -240,5 +242,7 @@ class MultiProcessingObserver:
             "memory_pressure": memory_pressure,
             "cpu_percent": self.current_system_metrics.total_cpu_percent,
             "memory_percent": self.current_system_metrics.memory_percent,
-            "recommendation": "Consider scaling down workers" if cpu_pressure or memory_pressure else "Resources healthy",
+            "recommendation": (
+                "Consider scaling down workers" if cpu_pressure or memory_pressure else "Resources healthy"
+            ),
         }
