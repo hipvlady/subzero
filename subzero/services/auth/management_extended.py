@@ -409,7 +409,7 @@ class ExtendedManagementAPI:
             query = " AND ".join(query_parts)
 
             # Calculate from timestamp
-            from_timestamp = int((time.time() - (hours * 3600)) * 1000)  # Milliseconds
+            int((time.time() - (hours * 3600)) * 1000)  # Milliseconds
 
             response = await self.http_client.get(
                 "/api/v2/logs", params={"q": query, "sort": "date:-1", "per_page": 100}

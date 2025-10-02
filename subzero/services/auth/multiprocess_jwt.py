@@ -11,10 +11,7 @@ import asyncio
 import multiprocessing as mp
 import time
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import shared_memory
 from typing import Any
-
-import numpy as np
 
 from subzero.services.auth.eddsa_key_manager import EdDSAKeyManager
 

@@ -11,11 +11,11 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
+
 from subzero.services.auth.cuckoo_cache import CuckooCache
 from subzero.services.auth.eddsa_key_manager import EdDSAKeyManager
 from subzero.services.auth.token_pool import AdaptiveTokenPool
-
-import numpy as np
 
 
 @dataclass
@@ -194,7 +194,7 @@ class HighPerformanceAuthenticator:
             (token, expires_at) tuple
         """
         # Create JWT assertion
-        assertion = await self._create_jwt_assertion(user_id)
+        await self._create_jwt_assertion(user_id)
 
         # In production, this would exchange with Auth0
         # For testing, we'll create a mock token

@@ -12,7 +12,6 @@ Expected Performance Improvements:
 import asyncio
 import time
 
-import numpy as np
 import pytest
 import redis.asyncio as redis
 
@@ -45,7 +44,7 @@ class TestSharedMemoryIPC:
             assert token_data["user_id"] == slot
         read_time = time.perf_counter() - start
 
-        print(f"\n📊 Shared Memory Token Cache:")
+        print("\n📊 Shared Memory Token Cache:")
         print(f"   Read 100 tokens in {read_time*1000:.2f}ms")
         print(f"   Avg: {read_time*10:.2f}μs per token")
 
@@ -79,7 +78,7 @@ class TestSharedMemoryIPC:
                     hits += 1
         read_time = time.perf_counter() - start
 
-        print(f"\n📊 Shared Memory Permission Cache:")
+        print("\n📊 Shared Memory Permission Cache:")
         print(f"   Read 1,000 permissions in {read_time*1000:.2f}ms")
         print(f"   Hits: {hits}")
         print(f"   Avg: {read_time*1000:.2f}μs per permission")
@@ -105,7 +104,7 @@ class TestSharedMemoryIPC:
         results = cache.batch_read_tokens(slots)
         batch_time = time.perf_counter() - start
 
-        print(f"\n📊 Batch Read Performance:")
+        print("\n📊 Batch Read Performance:")
         print(f"   Batch read 100 tokens in {batch_time*1000:.2f}ms")
         print(f"   Avg: {batch_time*10:.2f}μs per token")
 
@@ -144,7 +143,7 @@ class TestBackpressureMechanism:
         tasks = [worker(0.01) for _ in range(20)]
         await asyncio.gather(*tasks)
 
-        print(f"\n📊 Adaptive Semaphore:")
+        print("\n📊 Adaptive Semaphore:")
         print(f"   Max concurrent: {max_active}")
         print(f"   Limit: {limits.max_concurrent}")
 
@@ -184,7 +183,7 @@ class TestBackpressureMechanism:
         # Check metrics
         metrics = manager.get_all_metrics()
 
-        print(f"\n📊 Backpressure Manager:")
+        print("\n📊 Backpressure Manager:")
         for service_name, service_metrics in metrics.items():
             print(f"   {service_name}:")
             print(f"     Requests: {service_metrics['total_requests']}")
@@ -219,12 +218,12 @@ class TestRedisPipelineBatching:
 
             # Set operations (batched)
             start = time.perf_counter()
-            set_tasks = [batcher.set(key, value) for key, value in zip(keys, values)]
+            set_tasks = [batcher.set(key, value) for key, value in zip(keys, values, strict=False)]
             results = await asyncio.gather(*set_tasks)
             await batcher.flush()
             set_time = time.perf_counter() - start
 
-            print(f"\n📊 Redis Pipeline Batching:")
+            print("\n📊 Redis Pipeline Batching:")
             print(f"   Set 100 keys in {set_time*1000:.2f}ms")
             print(f"   Avg: {set_time*10:.2f}μs per operation")
 
@@ -276,7 +275,7 @@ class TestProcessPoolWarmup:
         await warmer.warmup_all()
         warmup_time = time.perf_counter() - start
 
-        print(f"\n📊 Process Pool Warmup:")
+        print("\n📊 Process Pool Warmup:")
         print(f"   Warmup time: {warmup_time*1000:.0f}ms")
 
         stats = warmer.get_stats()
@@ -290,7 +289,7 @@ class TestProcessPoolWarmup:
         # Execute task (should be instant, no cold start)
         loop = asyncio.get_running_loop()
         start = time.perf_counter()
-        result = await loop.run_in_executor(executor, _warmup_hash_operations)
+        await loop.run_in_executor(executor, _warmup_hash_operations)
         exec_time = time.perf_counter() - start
 
         print(f"   First execution: {exec_time*1000:.0f}ms (no cold start!)")
@@ -311,7 +310,7 @@ class TestIntegratedPerformance:
         Expected: 40-60% overall improvement
         """
         from subzero.services.auth.shared_memory_cache import SharedMemoryCache
-        from subzero.services.concurrency.backpressure import BackpressureManager, ServiceLimits
+        from subzero.services.concurrency.backpressure import BackpressureManager
 
         # Setup shared memory cache
         cache = SharedMemoryCache(max_tokens=1000)
@@ -334,7 +333,7 @@ class TestIntegratedPerformance:
         results = await asyncio.gather(*tasks)
         total_time = time.perf_counter() - start
 
-        print(f"\n📊 Integrated Performance:")
+        print("\n📊 Integrated Performance:")
         print(f"   100 cache reads with backpressure in {total_time*1000:.2f}ms")
         print(f"   Throughput: {100/total_time:.0f} ops/sec")
 

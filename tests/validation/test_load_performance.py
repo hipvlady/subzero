@@ -11,7 +11,8 @@ Validates:
 
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 
@@ -49,7 +50,7 @@ class TestRPSThroughput:
         with patch.object(provider.http_client, "post", return_value=mock_response):
             # Warm up
             for _ in range(100):
-                await provider.register_dynamic_client({"agent_id": f"warmup_agent", "client_name": "Warmup"})
+                await provider.register_dynamic_client({"agent_id": "warmup_agent", "client_name": "Warmup"})
 
             # Measure throughput
             start_time = time.perf_counter()
@@ -74,11 +75,11 @@ class TestRPSThroughput:
             actual_duration = time.perf_counter() - start_time
             rps = request_count / actual_duration
 
-            print(f"\n📊 RPS Benchmark Results:")
+            print("\n📊 RPS Benchmark Results:")
             print(f"  Total Requests: {request_count:,}")
             print(f"  Duration: {actual_duration:.2f}s")
             print(f"  RPS: {rps:,.0f}")
-            print(f"  Target: 10,000+ RPS")
+            print("  Target: 10,000+ RPS")
 
             # Validate claim
             assert rps >= 10_000, f"RPS {rps:,.0f} below target 10,000"
@@ -94,7 +95,7 @@ class TestRPSThroughput:
 
         Tests ReBAC + ABAC throughput
         """
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
         rebac = ReBACEngine()
 
@@ -116,7 +117,7 @@ class TestRPSThroughput:
         while time.perf_counter() < end_time:
             # Batch of 500 checks
             tasks = []
-            for i in range(500):
+            for _i in range(500):
                 doc_id = f"doc_{check_count % 1000}"
                 user_id = f"user_{(check_count % 1000) % 100}"
                 tasks.append(rebac.check("doc", doc_id, "viewer", "user", user_id))
@@ -127,7 +128,7 @@ class TestRPSThroughput:
         actual_duration = time.perf_counter() - start_time
         rps = check_count / actual_duration
 
-        print(f"\n📊 ReBAC Authorization RPS:")
+        print("\n📊 ReBAC Authorization RPS:")
         print(f"  Total Checks: {check_count:,}")
         print(f"  Duration: {actual_duration:.2f}s")
         print(f"  RPS: {rps:,.0f}")
@@ -153,9 +154,9 @@ class TestEndToEndLatency:
         3. ABAC policy evaluation
         4. LLM security validation
         """
-        from subzero.services.mcp.oauth import MCPOAuthProvider
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
         from subzero.services.authorization.abac import ABACEngine, AuthorizationContext
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
+        from subzero.services.mcp.oauth import MCPOAuthProvider
         from subzero.services.security.llm_security import LLMSecurityGuard
 
         # Setup components
@@ -173,22 +174,22 @@ class TestEndToEndLatency:
         # Measure end-to-end latency
         latencies = []
 
-        for i in range(1000):
+        for _i in range(1000):
             start = time.perf_counter()
 
             # 1. Validate token (mocked)
             with patch.object(oauth, "_validate_token", return_value=mock_token_info):
-                token_valid = await oauth._validate_token("mock_token")
+                await oauth._validate_token("mock_token")
 
             # 2. ReBAC check
-            rebac_ok = await rebac.check("api", "resource1", "viewer", "user", "alice")
+            await rebac.check("api", "resource1", "viewer", "user", "alice")
 
             # 3. ABAC evaluation
             context = AuthorizationContext(user_id="alice", user_role="user", resource_id="resource1", action="read")
-            abac_result = await abac.evaluate(context)
+            await abac.evaluate(context)
 
             # 4. LLM security check
-            security_result = guard.validate_input("alice", "Read the document")
+            guard.validate_input("alice", "Read the document")
 
             latency_ms = (time.perf_counter() - start) * 1000
             latencies.append(latency_ms)
@@ -198,12 +199,12 @@ class TestEndToEndLatency:
         p95_latency = sorted(latencies)[int(len(latencies) * 0.95)]
         p99_latency = sorted(latencies)[int(len(latencies) * 0.99)]
 
-        print(f"\n📊 End-to-End Authentication Latency:")
+        print("\n📊 End-to-End Authentication Latency:")
         print(f"  Average: {avg_latency:.2f}ms")
         print(f"  P50: {p50_latency:.2f}ms")
         print(f"  P95: {p95_latency:.2f}ms")
         print(f"  P99: {p99_latency:.2f}ms")
-        print(f"  Target: <10ms")
+        print("  Target: <10ms")
 
         # Validate claim
         assert p95_latency < 10, f"P95 latency {p95_latency:.2f}ms exceeds 10ms target"
@@ -242,7 +243,7 @@ class TestEndToEndLatency:
         actual_duration = time.perf_counter() - start_time
         validations_per_sec = validation_count / actual_duration
 
-        print(f"\n📊 LLM Validation Throughput:")
+        print("\n📊 LLM Validation Throughput:")
         print(f"  Total Validations: {validation_count:,}")
         print(f"  Duration: {actual_duration:.2f}s")
         print(f"  Validations/sec: {validations_per_sec:,.0f}")
@@ -264,7 +265,7 @@ class TestCacheHitRatio:
         2. Simulate realistic access patterns (80/20 rule)
         3. Measure cache hits vs misses
         """
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
         rebac = ReBACEngine()
 
@@ -308,12 +309,12 @@ class TestCacheHitRatio:
 
         hit_ratio = (cache_hits / total_checks * 100) if total_checks > 0 else 0
 
-        print(f"\n📊 Cache Hit Ratio Analysis:")
+        print("\n📊 Cache Hit Ratio Analysis:")
         print(f"  Total Checks: {total_checks:,}")
         print(f"  Cache Hits: {cache_hits:,}")
         print(f"  Cache Misses: {cache_misses:,}")
         print(f"  Hit Ratio: {hit_ratio:.1f}%")
-        print(f"  Target: 95%")
+        print("  Target: 95%")
 
         with open("/tmp/cache_hit_ratio.txt", "w") as f:
             f.write(f"{hit_ratio:.1f}")
@@ -356,8 +357,8 @@ class TestConcurrentLoad:
             successes = sum(1 for r in results if isinstance(r, dict) and r.get("success"))
             errors = len(results) - successes
 
-            print(f"\n📊 Concurrent Request Handling:")
-            print(f"  Total Requests: 1,000")
+            print("\n📊 Concurrent Request Handling:")
+            print("  Total Requests: 1,000")
             print(f"  Successful: {successes}")
             print(f"  Errors: {errors}")
             print(f"  Duration: {duration:.2f}s")
@@ -376,7 +377,7 @@ class TestScalabilityPatterns:
         """
         Test handling burst traffic (0 -> 10k -> 0)
         """
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
         rebac = ReBACEngine()
 
@@ -385,7 +386,7 @@ class TestScalabilityPatterns:
 
         # Simulate burst: 10,000 requests in <1 second
         tasks = []
-        for i in range(10_000):
+        for _i in range(10_000):
             tasks.append(rebac.check("api", "endpoint1", "viewer", "user", "alice"))
 
         start = time.perf_counter()
@@ -394,8 +395,8 @@ class TestScalabilityPatterns:
 
         rps = 10_000 / duration
 
-        print(f"\n📊 Burst Traffic Handling:")
-        print(f"  Burst Size: 10,000 requests")
+        print("\n📊 Burst Traffic Handling:")
+        print("  Burst Size: 10,000 requests")
         print(f"  Duration: {duration:.3f}s")
         print(f"  Effective RPS: {rps:,.0f}")
 
@@ -431,7 +432,7 @@ class TestScalabilityPatterns:
         avg_rps = request_count / actual_duration
         avg_latency = sum(latencies) / len(latencies)
 
-        print(f"\n📊 Sustained Load Stability:")
+        print("\n📊 Sustained Load Stability:")
         print(f"  Duration: {actual_duration:.1f}s")
         print(f"  Total Requests: {request_count:,}")
         print(f"  Average RPS: {avg_rps:,.0f}")

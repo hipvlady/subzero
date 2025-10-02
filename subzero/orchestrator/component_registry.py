@@ -24,9 +24,10 @@ import asyncio
 import platform
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 from subzero.services.security.audit import AuditEvent, AuditEventType, AuditSeverity, AuditTrailService
 
@@ -59,8 +60,8 @@ class ComponentMetadata:
     version: str
     status: ComponentStatus = ComponentStatus.STARTING
     dependencies: list[str] = field(default_factory=list)
-    health_check: Optional[Callable] = None
-    fallback: Optional[Callable] = None
+    health_check: Callable | None = None
+    fallback: Callable | None = None
     last_check: float = 0.0
     check_interval: float = 60.0  # Check every 60 seconds
     error_count: int = 0
@@ -103,7 +104,7 @@ class ComponentRegistry:
         self.instances: dict[str, Any] = {}
 
         # Health check task
-        self.health_check_task: Optional[asyncio.Task] = None
+        self.health_check_task: asyncio.Task | None = None
         self.is_running = False
 
         # Audit logger
@@ -143,9 +144,9 @@ class ComponentRegistry:
             capabilities["numpy"] = False
 
         try:
-            import redis
+            import importlib.util
 
-            capabilities["redis"] = True
+            capabilities["redis"] = importlib.util.find_spec("redis") is not None
         except ImportError:
             capabilities["redis"] = False
 
@@ -158,9 +159,9 @@ class ComponentRegistry:
             capabilities["multiprocessing"] = False
 
         try:
-            from multiprocessing import shared_memory
+            import importlib.util
 
-            capabilities["shared_memory"] = True
+            capabilities["shared_memory"] = importlib.util.find_spec("multiprocessing.shared_memory") is not None
         except ImportError:
             capabilities["shared_memory"] = False
 
@@ -183,11 +184,11 @@ class ComponentRegistry:
         category: ComponentCategory,
         version: str = "1.0.0",
         instance: Any = None,
-        dependencies: Optional[list[str]] = None,
-        health_check: Optional[Callable] = None,
-        fallback: Optional[Callable] = None,
+        dependencies: list[str] | None = None,
+        health_check: Callable | None = None,
+        fallback: Callable | None = None,
         check_interval: float = 60.0,
-        required_capabilities: Optional[list[str]] = None,
+        required_capabilities: list[str] | None = None,
     ) -> bool:
         """
         Register component with registry
@@ -318,7 +319,7 @@ class ComponentRegistry:
     def _topological_sort(self) -> list[str]:
         """Sort components by dependencies"""
         # Simple topological sort (Kahn's algorithm)
-        in_degree = {name: 0 for name in self.components}
+        in_degree = dict.fromkeys(self.components, 0)
 
         for name, metadata in self.components.items():
             for dep in metadata.dependencies:
@@ -541,7 +542,7 @@ class ComponentRegistry:
 
 
 # Global registry instance
-_registry: Optional[ComponentRegistry] = None
+_registry: ComponentRegistry | None = None
 
 
 def get_registry() -> ComponentRegistry:

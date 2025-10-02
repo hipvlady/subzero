@@ -22,10 +22,10 @@ import os
 import random
 import time
 from collections import deque
-from concurrent.futures import Future, ProcessPoolExecutor
+from collections.abc import Callable
+from concurrent.futures import Future
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional
 
 
 class TaskPriority(Enum):
@@ -46,7 +46,7 @@ class WorkItem:
     args: tuple
     kwargs: dict
     priority: TaskPriority
-    affinity: Optional[int]  # Preferred CPU
+    affinity: int | None  # Preferred CPU
     future: Future
     enqueue_time: float
 
@@ -76,7 +76,7 @@ class WorkQueue:
         self.deque.append(item)
         self.stats["local_pushes"] += 1
 
-    def pop_local(self) -> Optional[WorkItem]:
+    def pop_local(self) -> WorkItem | None:
         """Pop from local end (LIFO)"""
         try:
             item = self.deque.pop()
@@ -85,7 +85,7 @@ class WorkQueue:
         except IndexError:
             return None
 
-    def steal(self) -> Optional[WorkItem]:
+    def steal(self) -> WorkItem | None:
         """Steal from remote end (FIFO for fairness)"""
         try:
             item = self.deque.popleft()
@@ -172,7 +172,7 @@ class WorkStealingWorker:
                     # Exponential backoff
                     self.current_backoff_ms = min(self.current_backoff_ms * 2, self.backoff_max_ms)
 
-    async def _try_steal_work(self) -> Optional[WorkItem]:
+    async def _try_steal_work(self) -> WorkItem | None:
         """
         Try to steal work from other queues
 
@@ -228,7 +228,7 @@ class WorkStealingPool:
     Work-stealing thread pool with optimal CPU utilization
     """
 
-    def __init__(self, num_workers: Optional[int] = None, numa_aware: bool = True):
+    def __init__(self, num_workers: int | None = None, numa_aware: bool = True):
         """
         Initialize work-stealing pool
 
@@ -319,7 +319,7 @@ class WorkStealingPool:
         func: Callable,
         *args,
         priority: TaskPriority = TaskPriority.NORMAL,
-        affinity: Optional[int] = None,
+        affinity: int | None = None,
         **kwargs,
     ) -> Future:
         """
@@ -395,10 +395,10 @@ class WorkStealingPool:
 
 
 # Global instance
-_work_stealing_pool: Optional[WorkStealingPool] = None
+_work_stealing_pool: WorkStealingPool | None = None
 
 
-def get_work_stealing_pool(num_workers: Optional[int] = None) -> WorkStealingPool:
+def get_work_stealing_pool(num_workers: int | None = None) -> WorkStealingPool:
     """Get global work-stealing pool instance"""
     global _work_stealing_pool
     if _work_stealing_pool is None:

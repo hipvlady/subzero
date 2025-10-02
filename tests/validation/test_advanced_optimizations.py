@@ -344,7 +344,7 @@ class TestBPlusTreeIndex:
 
         stats = index.get_stats()
 
-        print(f"✅ B+ tree: Performance test")
+        print("✅ B+ tree: Performance test")
         print(f"   10,000 insertions: {insert_duration_ms:.2f}ms")
         print(f"   1,000 searches: {search_duration_ms:.2f}ms")
         print(f"   Tree height: {stats['tree_height']}")
@@ -395,7 +395,7 @@ class TestHierarchicalPermissionIndex:
         resource100_users = index.get_resource_users(resource_id=100)
         assert len(resource100_users) == 3
 
-        print(f"✅ Hierarchical index: Bidirectional lookup working")
+        print("✅ Hierarchical index: Bidirectional lookup working")
         print(f"   User 1 permissions: {len(user1_perms)}")
         print(f"   Resource 100 users: {len(resource100_users)}")
 

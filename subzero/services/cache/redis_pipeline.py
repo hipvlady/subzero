@@ -26,9 +26,8 @@ Performance Impact:
 
 import asyncio
 import time
-from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any
 
 import redis.asyncio as redis
 
@@ -91,7 +90,7 @@ class RedisPipelineBatcher:
         self.pending_lock = asyncio.Lock()
 
         # Flush task
-        self.flush_task: Optional[asyncio.Task] = None
+        self.flush_task: asyncio.Task | None = None
         self.is_running = False
 
         # Statistics
@@ -201,7 +200,7 @@ class RedisPipelineBatcher:
             results = await pipeline.execute()
 
             # Resolve futures with results
-            for op, result in zip(operations, results):
+            for op, result in zip(operations, results, strict=False):
                 if not op.future.done():
                     op.future.set_result(result)
 
@@ -236,7 +235,7 @@ class RedisPipelineBatcher:
         """Get key (batched)"""
         return await self._add_operation("get", key)
 
-    async def set(self, key: str, value: Any, ex: Optional[int] = None) -> Any:
+    async def set(self, key: str, value: Any, ex: int | None = None) -> Any:
         """Set key (batched)"""
         if ex:
             return await self._add_operation("set", key, value, ex=ex)
@@ -327,7 +326,7 @@ class RedisAutoBatcher:
 
 
 # Global Redis batcher instance
-_redis_batcher: Optional[RedisPipelineBatcher] = None
+_redis_batcher: RedisPipelineBatcher | None = None
 
 
 async def get_redis_batcher(redis_client: redis.Redis) -> RedisPipelineBatcher:

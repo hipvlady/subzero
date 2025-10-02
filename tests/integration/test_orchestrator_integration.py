@@ -12,6 +12,7 @@ Tests:
 """
 
 import asyncio
+
 import pytest
 
 
@@ -25,7 +26,7 @@ class TestComponentRegistry:
 
         registry = get_registry()
 
-        print(f"\n📊 System Capabilities:")
+        print("\n📊 System Capabilities:")
         for cap, value in registry.capabilities.items():
             print(f"   {cap}: {value}")
 
@@ -133,14 +134,14 @@ class TestGatewayOrchestration:
 
         status = await orchestrator.get_status()
 
-        print(f"\n📊 Gateway Status:")
+        print("\n📊 Gateway Status:")
         print(f"   Total components: {status['summary']['total']}")
         print(f"   Healthy: {status['summary']['healthy']}")
         print(f"   Degraded: {status['summary']['degraded']}")
         print(f"   Unavailable: {status['summary']['unavailable']}")
 
         if status["degraded_features"]:
-            print(f"\n⚠️  Degraded features:")
+            print("\n⚠️  Degraded features:")
             for feature in status["degraded_features"]:
                 print(f"     - {feature}")
 
@@ -202,7 +203,7 @@ class TestGatewayOrchestration:
             "adaptive_cache",
         ]
 
-        print(f"\n📊 Feature Availability:")
+        print("\n📊 Feature Availability:")
         for feature in features_to_check:
             available = orchestrator.is_feature_available(feature)
             status_icon = "✅" if available else "❌"
@@ -332,7 +333,7 @@ class TestComplianceIntegration:
         assert "degraded_features" in status
         assert "unavailable_features" in status
 
-        print(f"\n📊 Status Report:")
+        print("\n📊 Status Report:")
         print(f"   Capabilities detected: {len(status['capabilities'])}")
         print(f"   Components registered: {status['summary']['total']}")
         print(f"   Healthy: {status['summary']['healthy']}")

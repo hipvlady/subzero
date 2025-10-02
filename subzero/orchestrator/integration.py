@@ -23,11 +23,9 @@ Components Registered:
 8. Adaptive Cache (fallback: fixed TTL)
 """
 
-import asyncio
-from typing import Any, Optional
+from typing import Any
 
-from subzero.orchestrator.component_registry import ComponentCategory, ComponentRegistry, ComponentStatus, get_registry
-from subzero.services.security.audit import AuditEvent, AuditEventType, AuditSeverity
+from subzero.orchestrator.component_registry import ComponentCategory, get_registry
 
 
 class OrchestrationError(Exception):
@@ -63,7 +61,7 @@ class GatewayOrchestrator:
         Registers components in dependency order with health checks and fallbacks
         """
         print("\n🚀 Initializing Subzero Zero Trust API Gateway...")
-        print(f"📊 System Capabilities:")
+        print("📊 System Capabilities:")
         for cap, value in self.registry.capabilities.items():
             print(f"   {cap}: {value}")
 
@@ -82,7 +80,7 @@ class GatewayOrchestrator:
         report = self.registry.get_status_report()
         summary = report["summary"]
 
-        print(f"\n✅ Gateway initialized:")
+        print("\n✅ Gateway initialized:")
         print(f"   Total components: {summary['total']}")
         print(f"   Healthy: {summary['healthy']}")
         print(f"   Degraded: {summary['degraded']}")
@@ -120,7 +118,7 @@ class GatewayOrchestrator:
 
                 test_tuple = AuthzTuple("test", "test", "viewer", "user", "health_check")
                 rebac.write_tuple(test_tuple)
-                result = await rebac.check("test", "test", "viewer", "user", "health_check")
+                await rebac.check("test", "test", "viewer", "user", "health_check")
                 rebac.delete_tuple(test_tuple)
                 return True
             except Exception:
@@ -253,7 +251,7 @@ class GatewayOrchestrator:
 
         async def check_http_pool_health():
             try:
-                stats = http_pool.get_stats()
+                http_pool.get_stats()
                 return True
             except Exception:
                 return False
@@ -279,7 +277,7 @@ class GatewayOrchestrator:
 
         async def check_backpressure_health():
             try:
-                metrics = manager.get_all_metrics()
+                manager.get_all_metrics()
                 return True
             except Exception:
                 return False
@@ -357,7 +355,7 @@ class GatewayOrchestrator:
             try:
                 from subzero.services.authorization.vectorized import VectorizedAuthorizationEngine
 
-                engine = VectorizedAuthorizationEngine(max_users=10, max_resources=10)
+                VectorizedAuthorizationEngine(max_users=10, max_resources=10)
                 return True
             except Exception:
                 return False
@@ -430,7 +428,7 @@ class GatewayOrchestrator:
 
         async def check_cache_health():
             try:
-                metrics = cache.get_metrics()
+                cache.get_metrics()
                 return True
             except Exception:
                 return False
@@ -577,7 +575,7 @@ class GatewayOrchestrator:
 
 
 # Global orchestrator instance
-_orchestrator: Optional[GatewayOrchestrator] = None
+_orchestrator: GatewayOrchestrator | None = None
 
 
 async def get_orchestrator() -> GatewayOrchestrator:

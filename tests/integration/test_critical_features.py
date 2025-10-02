@@ -12,30 +12,27 @@ Test Coverage:
 7. OPA policy-as-code
 """
 
-import asyncio
-import pytest
 import time
+
+import pytest
+
+from subzero.services.authorization.abac import ABACEngine, AuthorizationContext
+
+# Authorization imports
+from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
 # MCP OAuth imports
 from subzero.services.mcp.oauth import (
-    MCPOAuthProvider,
-    GrantType,
-    TokenType,
     ClientType,
+    MCPOAuthProvider,
     PKCEChallenge,
-    DPoPProof,
 )
 
 # Security imports
 from subzero.services.security.llm_security import (
     LLMSecurityGuard,
     LLMThreatType,
-    RiskLevel,
 )
-
-# Authorization imports
-from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
-from subzero.services.authorization.abac import ABACEngine, Policy, Effect, AuthorizationContext
 
 
 class TestMCPOAuth:
@@ -84,10 +81,9 @@ class TestMCPOAuth:
     def test_dpop_proof_validation(self, oauth_provider):
         """Test DPoP (Demonstration of Proof-of-Possession) - RFC 9449"""
         # Create mock DPoP proof JWT
+
         import jwt
         from cryptography.hazmat.primitives.asymmetric import rsa
-        from cryptography.hazmat.primitives import serialization
-        import json
 
         # Generate key pair
         private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -285,7 +281,7 @@ class TestOWASPLLMSecurity:
         model_id = "gpt-4"
 
         # Simulate excessive model access
-        for i in range(150):
+        for _i in range(150):
             security_guard.log_model_access(agent_id=agent_id, model_id=model_id, operation="query")
 
         # Should detect suspicious pattern
@@ -452,7 +448,7 @@ class TestABACPolicies:
         """Test environmental attribute policies"""
         from datetime import datetime
 
-        now = datetime.now()
+        datetime.now()
 
         context = AuthorizationContext(
             user_id="user_456",
@@ -500,7 +496,7 @@ class TestEndToEndIntegration:
         )
 
         assert client_result["success"] is True
-        client_id = client_result["client_id"]
+        client_result["client_id"]
 
         # 2. LLM Security: Validate input
         security_guard = LLMSecurityGuard()

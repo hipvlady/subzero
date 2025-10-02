@@ -7,7 +7,6 @@ Monitors CPU, memory, and performance metrics across processes
 """
 
 import asyncio
-import multiprocessing as mp
 import time
 from dataclasses import dataclass
 from typing import Any

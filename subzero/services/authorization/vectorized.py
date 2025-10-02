@@ -18,7 +18,6 @@ Performance:
 - Memory access: 3x more efficient (contiguous arrays)
 """
 
-import asyncio
 from dataclasses import dataclass
 from typing import Any
 

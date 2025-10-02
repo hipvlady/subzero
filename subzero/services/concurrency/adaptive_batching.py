@@ -19,9 +19,10 @@ Features:
 import asyncio
 import math
 import time
-from collections import defaultdict, deque
+from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 import numpy as np
 
@@ -191,7 +192,7 @@ class AdaptiveBatcher(Generic[T]):
 
         # Current batch
         self.current_batch: list[T] = []
-        self.batch_start_time: Optional[float] = None
+        self.batch_start_time: float | None = None
 
         # ML components
         self.ewma_predictor = EWMAPredictor(alpha=0.2)
@@ -204,7 +205,7 @@ class AdaptiveBatcher(Generic[T]):
         self.metrics_history: deque[BatchMetrics] = deque(maxlen=100)
 
         # Background task
-        self._flush_task: Optional[asyncio.Task] = None
+        self._flush_task: asyncio.Task | None = None
         self.is_running = False
 
         # Statistics
@@ -409,7 +410,7 @@ class MultiTargetBatcher:
         for batcher in self.batchers.values():
             await batcher.stop()
 
-    def get_batcher(self, name: str) -> Optional[AdaptiveBatcher]:
+    def get_batcher(self, name: str) -> AdaptiveBatcher | None:
         """Get batcher by name"""
         return self.batchers.get(name)
 
@@ -419,7 +420,7 @@ class MultiTargetBatcher:
 
 
 # Global instance
-_multi_batcher: Optional[MultiTargetBatcher] = None
+_multi_batcher: MultiTargetBatcher | None = None
 
 
 def get_multi_batcher() -> MultiTargetBatcher:

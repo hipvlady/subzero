@@ -26,9 +26,10 @@ Performance Impact:
 
 import asyncio
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 import numpy as np
 
@@ -128,7 +129,7 @@ class AdaptiveSemaphore:
 
         # Circuit breaker state
         self.circuit_state = CircuitState.CLOSED
-        self.circuit_open_until: Optional[float] = None
+        self.circuit_open_until: float | None = None
         self.circuit_half_open_attempts = 0
 
         # Latency tracking (for adaptive adjustment)
@@ -401,7 +402,7 @@ class CircuitBreakerOpenError(Exception):
 
 
 # Global backpressure manager singleton
-_backpressure_manager: Optional[BackpressureManager] = None
+_backpressure_manager: BackpressureManager | None = None
 
 
 def get_backpressure_manager() -> BackpressureManager:

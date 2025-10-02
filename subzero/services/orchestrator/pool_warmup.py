@@ -26,11 +26,10 @@ Performance Impact:
 
 import asyncio
 import hashlib
-import multiprocessing as mp
 import time
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 import numpy as np
 
@@ -125,7 +124,7 @@ def _warmup_numba_jit():
 def _warmup_authorization_operations():
     """Warmup authorization checks"""
     try:
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
         rebac = ReBACEngine()
 
@@ -179,8 +178,8 @@ class ProcessPoolWarmer:
         self,
         name: str,
         max_workers: int,
-        min_workers: Optional[int] = None,
-        warmup_tasks: Optional[list[Callable]] = None,
+        min_workers: int | None = None,
+        warmup_tasks: list[Callable] | None = None,
         warmup_iterations: int = 10,
     ):
         """
@@ -227,7 +226,7 @@ class ProcessPoolWarmer:
         # Report results
         print(f"\n✅ All pools warmed up in {elapsed_ms:.0f}ms")
 
-        for name, result in zip(self.pools.keys(), results):
+        for name, result in zip(self.pools.keys(), results, strict=False):
             if isinstance(result, Exception):
                 print(f"   ❌ {name}: {result}")
             else:
@@ -255,8 +254,8 @@ class ProcessPoolWarmer:
             # Run task in each worker
             task_results = []
 
-            for worker_id in range(config.min_workers):
-                for iteration in range(config.warmup_iterations):
+            for _worker_id in range(config.min_workers):
+                for _iteration in range(config.warmup_iterations):
                     try:
                         result = await loop.run_in_executor(executor, task_func)
                         task_results.append(result)
@@ -344,7 +343,7 @@ async def warmup_default_pools():
 
 
 # Global warmer instance
-_pool_warmer: Optional[ProcessPoolWarmer] = None
+_pool_warmer: ProcessPoolWarmer | None = None
 
 
 async def get_pool_warmer() -> ProcessPoolWarmer:

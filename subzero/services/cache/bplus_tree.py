@@ -17,8 +17,9 @@ Features:
 """
 
 import bisect
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any, Iterator, Optional, Tuple
+from typing import Any, Optional
 
 
 @dataclass
@@ -47,23 +48,23 @@ class BPlusTreeNode:
         self.is_leaf = is_leaf
 
         # Keys (sorted)
-        self.keys: list[Tuple[int, int]] = []  # (user_id, resource_id) tuples
+        self.keys: list[tuple[int, int]] = []  # (user_id, resource_id) tuples
 
         # Values (for leaf nodes)
         self.values: list[PermissionEntry] = []
 
         # Children (for internal nodes)
-        self.children: list["BPlusTreeNode"] = []
+        self.children: list[BPlusTreeNode] = []
 
         # Leaf node linkage for range queries
-        self.next_leaf: Optional["BPlusTreeNode"] = None
-        self.prev_leaf: Optional["BPlusTreeNode"] = None
+        self.next_leaf: BPlusTreeNode | None = None
+        self.prev_leaf: BPlusTreeNode | None = None
 
     def is_full(self) -> bool:
         """Check if node is full"""
         return len(self.keys) >= self.order - 1
 
-    def insert_key(self, key: Tuple[int, int], value: PermissionEntry) -> Optional["BPlusTreeNode"]:
+    def insert_key(self, key: tuple[int, int], value: PermissionEntry) -> Optional["BPlusTreeNode"]:
         """
         Insert key-value pair into node
 
@@ -151,7 +152,7 @@ class BPlusTreeNode:
 
         return new_internal
 
-    def search(self, key: Tuple[int, int]) -> Optional[PermissionEntry]:
+    def search(self, key: tuple[int, int]) -> PermissionEntry | None:
         """
         Search for key in subtree
 
@@ -173,7 +174,7 @@ class BPlusTreeNode:
             idx = bisect.bisect_right(self.keys, key)
             return self.children[idx].search(key)
 
-    def range_search(self, start_key: Tuple[int, int], end_key: Tuple[int, int]) -> list[PermissionEntry]:
+    def range_search(self, start_key: tuple[int, int], end_key: tuple[int, int]) -> list[PermissionEntry]:
         """
         Range query from start_key to end_key (inclusive)
 
@@ -267,7 +268,7 @@ class BPlusTreeIndex:
         self.stats["total_entries"] += 1
         self.stats["total_inserts"] += 1
 
-    def search(self, user_id: int, resource_id: int) -> Optional[PermissionEntry]:
+    def search(self, user_id: int, resource_id: int) -> PermissionEntry | None:
         """
         Search for permission
 
@@ -352,8 +353,7 @@ class BPlusTreeIndex:
 
         # Traverse leaf chain
         while node:
-            for value in node.values:
-                yield value
+            yield from node.values
             node = node.next_leaf
 
     def get_stats(self) -> dict:
@@ -396,7 +396,7 @@ class HierarchicalPermissionIndex:
         # Invalidate wildcard cache
         self.wildcard_cache.clear()
 
-    def check_permission(self, user_id: int, resource_id: int) -> Optional[PermissionEntry]:
+    def check_permission(self, user_id: int, resource_id: int) -> PermissionEntry | None:
         """
         Check if user has permission for resource
 
@@ -475,7 +475,7 @@ class HierarchicalPermissionIndex:
 
 
 # Global instance
-_hierarchical_index: Optional[HierarchicalPermissionIndex] = None
+_hierarchical_index: HierarchicalPermissionIndex | None = None
 
 
 def get_hierarchical_index() -> HierarchicalPermissionIndex:

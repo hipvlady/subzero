@@ -28,7 +28,6 @@ import httpx
 import jwt
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from subzero.config.defaults import settings
 from subzero.services.security.audit import AuditEvent, AuditEventType, AuditSeverity
 
 
@@ -240,7 +239,7 @@ class MCPOAuthProvider:
                         event_type=AuditEventType.AUTH_SUCCESS,
                         actor_id=agent_id,
                         actor_type="agent",
-                        action=f"OAuth authorization (client_credentials)",
+                        action="OAuth authorization (client_credentials)",
                         metadata={
                             "client_id": client_id,
                             "scopes": scopes,

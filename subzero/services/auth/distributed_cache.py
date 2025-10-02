@@ -7,7 +7,6 @@ Uses multiprocessing.Manager for cross-process cache sharing
 Provides better scalability and shared state management
 """
 
-import asyncio
 import multiprocessing as mp
 import time
 from typing import Any

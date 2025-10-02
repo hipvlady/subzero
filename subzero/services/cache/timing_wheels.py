@@ -18,10 +18,11 @@ Features:
 
 import asyncio
 import time
-from collections import defaultdict, deque
+from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 
 class TimeUnit(Enum):
@@ -40,8 +41,8 @@ class ExpiryEntry:
     key: str
     expiry_time: float
     generation: int  # For lazy deletion
-    callback: Optional[Callable] = None
-    data: Optional[Any] = None
+    callback: Callable | None = None
+    data: Any | None = None
 
 
 class TimingWheel:
@@ -73,7 +74,7 @@ class TimingWheel:
         self.total_duration_ms = num_buckets * tick_duration_ms
 
         # Parent wheel (for overflow)
-        self.parent_wheel: Optional[TimingWheel] = None
+        self.parent_wheel: TimingWheel | None = None
 
         # Statistics
         self.stats = {
@@ -208,7 +209,7 @@ class HierarchicalTimingWheels:
         self.callbacks: dict[str, Callable] = {}
 
         # Background task
-        self._tick_task: Optional[asyncio.Task] = None
+        self._tick_task: asyncio.Task | None = None
         self.is_running = False
 
         # Metrics
@@ -239,7 +240,7 @@ class HierarchicalTimingWheels:
             self._tick_task = None
 
     def schedule_expiry(
-        self, key: str, expiry_time: float, callback: Optional[Callable] = None, data: Optional[Any] = None
+        self, key: str, expiry_time: float, callback: Callable | None = None, data: Any | None = None
     ) -> bool:
         """
         Schedule entry for expiry
@@ -318,7 +319,7 @@ class HierarchicalTimingWheels:
 
     async def _tick_loop(self):
         """Background tick processor"""
-        last_tick_time = time.time()
+        time.time()
         tick_count = 0
 
         while self.is_running:
@@ -400,7 +401,7 @@ class HierarchicalTimingWheels:
 
 
 # Global instance
-_timing_wheels: Optional[HierarchicalTimingWheels] = None
+_timing_wheels: HierarchicalTimingWheels | None = None
 
 
 def get_timing_wheels() -> HierarchicalTimingWheels:

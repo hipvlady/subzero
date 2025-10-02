@@ -16,13 +16,11 @@ Features:
 Addresses Gap: MCP Metadata Discovery (0% -> 100%)
 """
 
-import json
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from subzero.services.mcp.capabilities import CapabilitySchema, CapabilityType

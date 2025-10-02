@@ -9,7 +9,6 @@ Target: 4x+ speedup for batch hash operations
 
 import asyncio
 import hashlib
-import multiprocessing as mp
 import time
 from concurrent.futures import ProcessPoolExecutor
 from typing import Any

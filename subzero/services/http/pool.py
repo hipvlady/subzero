@@ -129,7 +129,7 @@ class HTTPConnectionPool:
         self.stats["aiohttp_requests"] += 1
         return self.aiohttp_connector
 
-    def create_aiohttp_session(self, timeout: Optional[aiohttp.ClientTimeout] = None) -> aiohttp.ClientSession:
+    def create_aiohttp_session(self, timeout: aiohttp.ClientTimeout | None = None) -> aiohttp.ClientSession:
         """
         Create aiohttp session with shared connector
 
@@ -182,7 +182,7 @@ async def get_httpx_client() -> httpx.AsyncClient:
     return http_pool.get_httpx_client()
 
 
-async def get_aiohttp_session(timeout: Optional[aiohttp.ClientTimeout] = None) -> aiohttp.ClientSession:
+async def get_aiohttp_session(timeout: aiohttp.ClientTimeout | None = None) -> aiohttp.ClientSession:
     """
     Convenience function to create aiohttp session with shared connector
 

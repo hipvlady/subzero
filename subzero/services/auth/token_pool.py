@@ -67,7 +67,7 @@ class TokenPool:
             "evictions": 0,
         }
 
-    def get_token(self, user_id: str, required_scopes: set[str] | None = None) -> PooledToken | None:
+    def get_pooled_token(self, user_id: str, required_scopes: set[str] | None = None) -> PooledToken | None:
         """
         Get token from pool
 

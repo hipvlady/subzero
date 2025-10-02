@@ -17,11 +17,11 @@ Features:
 Addresses Gap: Auth0 Actions Integration (0% -> 100%)
 """
 
-import hashlib
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 import httpx
 
@@ -599,8 +599,8 @@ class Auth0ActionsManager:
             return {"should_block": False, "threat_score": 0.0}
 
         user = context.user or {}
-        user_id = user.get("user_id", "")
-        ip_address = context.request.get("ip", "")
+        user.get("user_id", "")
+        context.request.get("ip", "")
 
         # This would call the comprehensive threat detection system
         assessment = {

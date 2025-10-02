@@ -8,7 +8,6 @@ Offloads CPU-intensive operations to separate processes
 
 import asyncio
 import multiprocessing as mp
-import os
 import re
 from concurrent.futures import ProcessPoolExecutor
 from typing import Any
@@ -186,7 +185,6 @@ def _cleanup_cache_sync(key: str, expired_before: float) -> bool:
     """Check if cache key should be cleaned"""
     # Simulate cache cleanup logic
     # In reality, would check actual timestamps
-    import time
 
     # Mock: keys starting with 'old_' are expired
     return key.startswith("old_")

@@ -11,10 +11,8 @@ Tests:
 6. Adaptive cache TTL
 """
 
-import asyncio
 import time
 
-import numpy as np
 import pytest
 
 
@@ -27,7 +25,7 @@ class TestCacheTTLOptimization:
         Verify that increased TTL (900s) improves cache hit ratio
         compared to old TTL (300s)
         """
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
         rebac = ReBACEngine()
 
@@ -70,7 +68,7 @@ class TestCachePreWarming:
         """
         Test that pre-warming cache improves hit ratio immediately after startup
         """
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
         rebac = ReBACEngine()
 
@@ -95,7 +93,7 @@ class TestCachePreWarming:
         # Pre-warm cache
         stats = await rebac.prewarm_cache(common_checks)
 
-        print(f"\n🔥 Pre-warming Stats:")
+        print("\n🔥 Pre-warming Stats:")
         print(f"   Pre-warmed: {stats['prewarmed']} entries")
         print(f"   Errors: {stats['errors']}")
         print(f"   Cache Size: {stats['cache_size']}")
@@ -177,18 +175,18 @@ class TestVectorizedBatchAuthorization:
             expected = await engine.check_single(check["user_id"], check["resource_id"], check["permission"])
             assert results[i] == expected, f"Check {i} mismatch: got {results[i]}, expected {expected}"
 
-        print(f"\n⚡ Vectorized Batch Performance:")
+        print("\n⚡ Vectorized Batch Performance:")
         print(f"   Batch Size: {batch_size}")
         print(f"   Time: {batch_time*1000:.2f}ms")
         print(f"   Throughput: {batch_size/batch_time:.0f} checks/sec")
-        print(f"   All results correct: ✅")
+        print("   All results correct: ✅")
 
         # Should process at least 1k checks/sec (conservative target for correctness verification)
         throughput = batch_size / batch_time
         assert throughput >= 1_000, f"Throughput {throughput:.0f} below 1k checks/sec target"
 
         # Verify functionality is key - vectorized operations provide value at scale
-        print(f"   ✅ Vectorized batch operations functional and correct")
+        print("   ✅ Vectorized batch operations functional and correct")
 
 
 class TestJITOptimizedHotPaths:
@@ -219,7 +217,7 @@ class TestJITOptimizedHotPaths:
         risk_scores = auth.compute_risk_scores(events)
         jit_time = time.perf_counter() - start
 
-        print(f"\n🚀 JIT-Optimized Risk Scoring:")
+        print("\n🚀 JIT-Optimized Risk Scoring:")
         print(f"   Events: {len(events)}")
         print(f"   JIT Time: {jit_time*1000:.2f}ms")
         print(f"   Throughput: {len(events)/jit_time:.0f} events/sec")
@@ -259,7 +257,7 @@ class TestAdaptiveCacheTTL:
         hot_ttl = hot_entry.get_adaptive_ttl(base_ttl=900)
         assert hot_ttl == 1800, f"Hot entry should get 2x TTL (1800s), got {hot_ttl}s"
 
-        print(f"\n🔥 Adaptive TTL:")
+        print("\n🔥 Adaptive TTL:")
         print(f"   Cold Entry (5 accesses): {cold_ttl}s")
         print(f"   Warm Entry (50 accesses): {warm_ttl}s")
         print(f"   Hot Entry (150 accesses): {hot_ttl}s")
@@ -274,7 +272,7 @@ class TestOverallPerformanceImprovement:
         Test that all optimizations combined provide
         40-50% throughput improvement
         """
-        from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+        from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
         rebac = ReBACEngine()
 
@@ -319,7 +317,7 @@ class TestOverallPerformanceImprovement:
         metrics = rebac.get_metrics()
         cache_hit_rate = metrics["cache_hit_rate_percent"]
 
-        print(f"\n📊 Overall Performance (All Optimizations):")
+        print("\n📊 Overall Performance (All Optimizations):")
         print(f"   Throughput: {checks_per_sec:,.0f} checks/sec")
         print(f"   Avg Latency: {avg_latency_ms:.3f}ms")
         print(f"   Cache Hit Rate: {cache_hit_rate:.2f}%")
@@ -332,5 +330,5 @@ class TestOverallPerformanceImprovement:
         assert avg_latency_ms < 0.05, f"Avg latency {avg_latency_ms:.3f}ms above 0.05ms target"
         assert cache_hit_rate >= 90.0, f"Cache hit rate {cache_hit_rate:.2f}% below 90% target"
 
-        print(f"\n✅ All optimization targets met!")
-        print(f"   Expected improvement: 40-50% throughput gain")
+        print("\n✅ All optimization targets met!")
+        print("   Expected improvement: 40-50% throughput gain")

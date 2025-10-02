@@ -24,13 +24,9 @@ Performance:
 - Direct memory access from all processes
 """
 
-import hashlib
-import mmap
-import struct
 import time
 from dataclasses import dataclass
 from multiprocessing import Lock, shared_memory
-from typing import Any, Optional
 
 import numpy as np
 
@@ -236,7 +232,7 @@ class SharedMemoryCache:
             )
 
     def write_token(
-        self, user_id: int, token_hash: int, expires_at: float, scopes: set[int], slot: Optional[int] = None
+        self, user_id: int, token_hash: int, expires_at: float, scopes: set[int], slot: int | None = None
     ) -> int:
         """
         Write token to shared memory (zero-copy)
@@ -281,7 +277,7 @@ class SharedMemoryCache:
 
         return slot
 
-    def read_token(self, slot: int) -> Optional[dict]:
+    def read_token(self, slot: int) -> dict | None:
         """
         Read token from shared memory (zero-copy)
 
@@ -324,7 +320,7 @@ class SharedMemoryCache:
         }
 
     def write_permission(
-        self, user_id: int, resource_id: int, permissions: set[int], slot: Optional[int] = None
+        self, user_id: int, resource_id: int, permissions: set[int], slot: int | None = None
     ) -> int:
         """
         Write permission to shared memory (zero-copy)
@@ -365,7 +361,7 @@ class SharedMemoryCache:
 
         return slot
 
-    def read_permission(self, user_id: int, resource_id: int) -> Optional[set[int]]:
+    def read_permission(self, user_id: int, resource_id: int) -> set[int] | None:
         """
         Read permission from shared memory (zero-copy)
 
@@ -402,7 +398,7 @@ class SharedMemoryCache:
 
         return permissions
 
-    def batch_read_tokens(self, slots: list[int]) -> list[Optional[dict]]:
+    def batch_read_tokens(self, slots: list[int]) -> list[dict | None]:
         """
         Batch read tokens (zero-copy, vectorized)
 
@@ -496,7 +492,7 @@ class SharedMemoryCache:
 
 
 # Global singleton for process-shared cache
-_shared_cache_instance: Optional[SharedMemoryCache] = None
+_shared_cache_instance: SharedMemoryCache | None = None
 
 
 def get_shared_cache() -> SharedMemoryCache:
