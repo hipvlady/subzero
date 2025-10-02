@@ -319,9 +319,7 @@ class SharedMemoryCache:
             "scopes": scopes,
         }
 
-    def write_permission(
-        self, user_id: int, resource_id: int, permissions: set[int], slot: int | None = None
-    ) -> int:
+    def write_permission(self, user_id: int, resource_id: int, permissions: set[int], slot: int | None = None) -> int:
         """
         Write permission to shared memory (zero-copy)
 
