@@ -21,7 +21,26 @@ from enum import Enum
 
 
 class RelationType(str, Enum):
-    """Types of relationships between objects"""
+    """
+    Types of relationships between objects.
+
+    Attributes
+    ----------
+    OWNER : str
+        Full ownership permission
+    EDITOR : str
+        Edit permission
+    VIEWER : str
+        Read-only permission
+    PARENT : str
+        Parent relationship for inheritance
+    MEMBER : str
+        Team/group membership
+    ADMIN : str
+        Administrative permission
+    CONTRIBUTOR : str
+        Contributor permission
+    """
 
     OWNER = "owner"
     EDITOR = "editor"

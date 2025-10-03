@@ -23,7 +23,37 @@ from subzero.services.security.health import Auth0HealthMonitor
 
 @dataclass
 class AuthenticationResult:
-    """Result of authentication operation"""
+    """
+    Result of authentication operation.
+
+    Attributes
+    ----------
+    success : bool
+        Whether authentication succeeded
+    user_id : str, optional
+        Authenticated user identifier
+    claims : dict, optional
+        JWT token claims
+    token_data : dict, optional
+        Complete token response from Auth0
+    source : str, default "auth0"
+        Authentication source ('auth0', 'cached', 'cached_fallback', 'error')
+    degradation_mode : str, default "normal"
+        Current degradation mode ('normal', 'degraded', 'critical')
+    latency_ms : float, default 0.0
+        Authentication operation latency in milliseconds
+    error : str, optional
+        Error message if authentication failed
+
+    Examples
+    --------
+    >>> result = AuthenticationResult(
+    ...     success=True,
+    ...     user_id="user_123",
+    ...     source="auth0",
+    ...     latency_ms=45.2
+    ... )
+    """
 
     success: bool
     user_id: str | None = None
@@ -37,7 +67,33 @@ class AuthenticationResult:
 
 @dataclass
 class AuthorizationResult:
-    """Result of authorization check"""
+    """
+    Result of authorization check.
+
+    Attributes
+    ----------
+    allowed : bool
+        Whether access is granted
+    source : str, default "fga"
+        Authorization source ('fga', 'cached', 'cached_fallback', 'error')
+    degradation_mode : str, default "normal"
+        Current degradation mode ('normal', 'degraded', 'critical')
+    latency_ms : float, default 0.0
+        Authorization check latency in milliseconds
+    cached_decision : bool, default False
+        Whether decision came from cache
+    error : str, optional
+        Error message if check failed
+
+    Examples
+    --------
+    >>> result = AuthorizationResult(
+    ...     allowed=True,
+    ...     source="fga",
+    ...     latency_ms=25.5,
+    ...     cached_decision=False
+    ... )
+    """
 
     allowed: bool
     source: str = "fga"  # fga, cached, error
@@ -49,8 +105,64 @@ class AuthorizationResult:
 
 class ResilientAuthService:
     """
-    High-availability authentication service with graceful degradation
-    Automatically falls back to cached validation when Auth0 is unavailable
+    High-availability authentication service with graceful degradation.
+
+    Resilient authentication and authorization service that automatically
+    falls back to cached validation when Auth0 is unavailable. Provides
+    continuous service during outages with configurable degradation modes.
+
+    Parameters
+    ----------
+    auth0_config : Auth0Configuration
+        Complete Auth0 configuration
+    enable_degradation : bool, default True
+        Enable graceful degradation with caching
+
+    Attributes
+    ----------
+    auth0 : Auth0IntegrationManager
+        Auth0 integration manager
+    health_monitor : Auth0HealthMonitor
+        Health monitoring for Auth0 services
+    audit_service : AuditTrailService
+        Audit logging service
+    degradation_service : GracefulDegradationService, optional
+        Graceful degradation service (if enabled)
+    degradation_enabled : bool
+        Whether degradation is enabled
+    metrics : dict
+        Performance and usage metrics
+
+    Notes
+    -----
+    Service degradation flow:
+    1. Normal mode: All requests go to Auth0
+    2. Degraded mode: Health checks fail, fallback to cache
+    3. Critical mode: Auth0 unavailable, cache-only operation
+
+    Performance characteristics:
+    - Auth0 authentication: 50-150ms
+    - Cached authentication: 2-5ms
+    - FGA authorization: 10-50ms
+    - Cached authorization: 1-3ms
+
+    See Also
+    --------
+    Auth0IntegrationManager : Low-level Auth0 integration
+    GracefulDegradationService : Degradation and caching logic
+    Auth0HealthMonitor : Health monitoring
+
+    Examples
+    --------
+    >>> config = Auth0Configuration(
+    ...     domain="tenant.auth0.com",
+    ...     client_id="client_id",
+    ...     audience="https://api.example.com"
+    ... )
+    >>> service = ResilientAuthService(config)
+    >>> await service.start()
+    >>> result = await service.authenticate("user_123")
+    >>> print(f"Source: {result.source}, Latency: {result.latency_ms}ms")
     """
 
     def __init__(self, auth0_config: Auth0Configuration, enable_degradation: bool = True):
@@ -82,7 +194,16 @@ class ResilientAuthService:
         }
 
     async def start(self):
-        """Start all services"""
+        """
+        Start all services.
+
+        Initializes health monitoring, audit logging, and degradation services.
+
+        Notes
+        -----
+        Should be called once during application startup before processing
+        any authentication or authorization requests.
+        """
         await self.health_monitor.start_monitoring()
         await self.audit_service.start()
 
@@ -92,7 +213,17 @@ class ResilientAuthService:
         print("✅ Resilient auth service started")
 
     async def stop(self):
-        """Stop all services"""
+        """
+        Stop all services.
+
+        Gracefully shuts down health monitoring, audit logging, and
+        degradation services.
+
+        Notes
+        -----
+        Should be called during application shutdown to ensure proper
+        cleanup of resources and final audit log writes.
+        """
         await self.health_monitor.stop_monitoring()
         await self.audit_service.stop()
 
@@ -103,15 +234,66 @@ class ResilientAuthService:
         self, user_id: str, token: str | None = None, scopes: str = "openid profile email"
     ) -> AuthenticationResult:
         """
-        Authenticate user with automatic failover to cached validation
+        Authenticate user with automatic failover to cached validation.
 
-        Args:
-            user_id: User identifier
-            token: Optional JWT token to validate
-            scopes: Requested scopes (if issuing new token)
+        Attempts Auth0 authentication with Private Key JWT. If Auth0 is
+        unavailable or degraded, falls back to cached token validation.
+        Automatically logs audit events and updates metrics.
 
-        Returns:
-            AuthenticationResult with success status and metadata
+        Parameters
+        ----------
+        user_id : str
+            User identifier for authentication
+        token : str, optional
+            JWT token to validate. If None, requests new token from Auth0.
+        scopes : str, default "openid profile email"
+            Space-separated OAuth 2.0 scopes to request
+
+        Returns
+        -------
+        AuthenticationResult
+            Authentication result containing success status, user data,
+            source (auth0/cached), degradation mode, latency, and optional error
+
+        Notes
+        -----
+        Authentication flow:
+        1. Check current degradation mode and health status
+        2. If degraded and token provided, try cached validation first
+        3. Otherwise, attempt Auth0 Private Key JWT authentication
+        4. Cache successful authentication for future fallback
+        5. Log audit event (success or failure)
+        6. Update service metrics
+
+        Fallback strategy:
+        - Normal mode: Auth0 → Cache on error
+        - Degraded mode: Cache → Auth0 if cache miss
+        - Critical mode: Cache only
+
+        Performance:
+        - Auth0 path: 50-150ms
+        - Cached path: 2-5ms
+
+        See Also
+        --------
+        check_permission : Authorization with failover
+        Auth0IntegrationManager.authenticate_with_private_key_jwt : Auth0 auth
+
+        Examples
+        --------
+        >>> # New token request
+        >>> result = await service.authenticate("user_123")
+        >>> if result.success:
+        ...     print(f"Token: {result.token_data['access_token']}")
+        ...     print(f"Source: {result.source}, Latency: {result.latency_ms}ms")
+
+        >>> # Token validation
+        >>> result = await service.authenticate(
+        ...     "user_123",
+        ...     token="eyJ0eXAi...",
+        ...     scopes="openid profile email read:data"
+        ... )
+        >>> print(f"Valid: {result.success}, Source: {result.source}")
         """
         start_time = time.perf_counter()
         self.metrics["total_auth_requests"] += 1
@@ -254,16 +436,65 @@ class ResilientAuthService:
         self, user_id: str, resource_type: str, resource_id: str, relation: str
     ) -> AuthorizationResult:
         """
-        Check authorization with automatic failover to cached decisions
+        Check authorization with automatic failover to cached decisions.
 
-        Args:
-            user_id: User identifier
-            resource_type: Resource type
-            resource_id: Resource identifier
-            relation: Relation to check
+        Queries Auth0 FGA for permission check. If FGA is unavailable or
+        degraded, falls back to cached authorization decisions. Automatically
+        logs audit events and updates metrics.
 
-        Returns:
-            AuthorizationResult with decision and metadata
+        Parameters
+        ----------
+        user_id : str
+            User identifier
+        resource_type : str
+            Resource type (e.g., 'document', 'folder')
+        resource_id : str
+            Resource identifier
+        relation : str
+            Permission/relation to check (e.g., 'viewer', 'editor', 'owner')
+
+        Returns
+        -------
+        AuthorizationResult
+            Authorization result containing allowed status, source (fga/cached),
+            degradation mode, latency, and optional error
+
+        Notes
+        -----
+        Authorization flow:
+        1. Check current degradation mode and health status
+        2. If degraded, try cached decision first
+        3. Otherwise, query Auth0 FGA
+        4. Cache successful decision for future fallback (TTL: 5 minutes)
+        5. Log audit event (granted or denied)
+        6. Update service metrics
+
+        Fallback strategy:
+        - Normal mode: FGA → Cache on error
+        - Degraded mode: Cache → FGA if cache miss
+        - Critical mode: Cache only (default deny if no cache)
+
+        Performance:
+        - FGA path: 10-50ms
+        - Cached path: 1-3ms
+
+        See Also
+        --------
+        authenticate : Authentication with failover
+        Auth0IntegrationManager.check_fga_permission : FGA check
+
+        Examples
+        --------
+        >>> result = await service.check_permission(
+        ...     user_id="user_123",
+        ...     resource_type="document",
+        ...     resource_id="doc_456",
+        ...     relation="editor"
+        ... )
+        >>> if result.allowed:
+        ...     print(f"Access granted (source: {result.source})")
+        ...     print(f"Cached: {result.cached_decision}")
+        ...     print(f"Latency: {result.latency_ms}ms")
         """
         start_time = time.perf_counter()
         self.metrics["total_authz_checks"] += 1
@@ -396,7 +627,35 @@ class ResilientAuthService:
             )
 
     def get_service_metrics(self) -> dict:
-        """Get comprehensive service metrics"""
+        """
+        Get comprehensive service metrics.
+
+        Returns
+        -------
+        dict
+            Service metrics with structure:
+            - 'authentication' : dict
+                Authentication metrics (requests, successes, failures, rate)
+            - 'authorization' : dict
+                Authorization metrics (checks, successes, failures, rate)
+            - 'performance' : dict
+                Performance metrics (latencies)
+            - 'degradation' : dict, optional
+                Degradation status (if enabled)
+            - 'health' : dict
+                Health monitoring data
+
+        Notes
+        -----
+        Metrics are cumulative since service start. Reset on restart.
+
+        Examples
+        --------
+        >>> metrics = service.get_service_metrics()
+        >>> print(f"Auth success rate: {metrics['authentication']['success_rate_percent']:.1f}%")
+        >>> print(f"Avg latency: {metrics['performance']['avg_latency_ms']:.2f}ms")
+        >>> print(f"Degradation mode: {metrics['degradation']['current_mode']}")
+        """
         total_requests = self.metrics["total_auth_requests"] + self.metrics["total_authz_checks"]
         avg_latency = self.metrics["total_latency_ms"] / total_requests if total_requests > 0 else 0
 

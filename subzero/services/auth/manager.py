@@ -181,10 +181,58 @@ class Auth0IntegrationManager:
 
     async def authenticate_with_private_key_jwt(self, user_id: str, scopes: str = "openid profile email") -> dict:
         """
-        Authenticate using Private Key JWT (RFC 7523)
-        Eliminates shared secrets completely
+        Authenticate using Private Key JWT (RFC 7523).
 
-        Auth0 API Endpoint: POST https://{domain}/oauth/token
+        Implements OAuth 2.0 Private Key JWT authentication to eliminate shared
+        secrets. Creates a JWT assertion signed with RSA private key and exchanges
+        it for an access token from Auth0.
+
+        Parameters
+        ----------
+        user_id : str
+            User identifier for authentication
+        scopes : str, default "openid profile email"
+            Space-separated OAuth 2.0 scopes to request
+
+        Returns
+        -------
+        dict
+            Authentication result with structure:
+            - 'success' : bool
+                Whether authentication succeeded
+            - 'token_data' : dict
+                Complete token response from Auth0 including access_token, expires_in
+            - 'auth_method' : str
+                Authentication method used ('private_key_jwt')
+            - 'error' : str, optional
+                Error message if authentication failed
+
+        Notes
+        -----
+        Authentication flow:
+        1. Create JWT assertion signed with private key
+        2. Submit to Auth0 token endpoint
+        3. Receive access token and metadata
+        4. Enrich response with timestamp and method
+
+        The JWT assertion is valid for 5 minutes and includes a unique JTI
+        for replay attack protection.
+
+        Auth0 API: POST https://{domain}/oauth/token
+
+        See Also
+        --------
+        _create_private_key_jwt_assertion : Creates the JWT assertion
+        get_public_key_for_auth0_config : Gets JWKS for Auth0 configuration
+
+        Examples
+        --------
+        >>> result = await manager.authenticate_with_private_key_jwt(
+        ...     "user_123",
+        ...     scopes="openid profile email read:data"
+        ... )
+        >>> if result['success']:
+        ...     print(f"Token: {result['token_data']['access_token']}")
         """
 
         # Step 1: Create JWT assertion
@@ -226,7 +274,38 @@ class Auth0IntegrationManager:
             return {"success": False, "error": f"Authentication failed: {str(e)}", "auth_method": "private_key_jwt"}
 
     def _create_private_key_jwt_assertion(self, user_id: str) -> str:
-        """Create Private Key JWT assertion according to RFC 7523"""
+        """
+        Create Private Key JWT assertion according to RFC 7523.
+
+        Generates a signed JWT assertion with required claims for Auth0
+        token endpoint authentication. Uses RS256 algorithm with RSA-2048 key.
+
+        Parameters
+        ----------
+        user_id : str
+            User identifier to include as subject claim
+
+        Returns
+        -------
+        str
+            Signed JWT assertion ready for Auth0 token endpoint
+
+        Notes
+        -----
+        JWT structure:
+        - Header: RS256 algorithm, JWT type, key identifier
+        - Claims: iss, sub, aud, iat, exp, jti, scope
+        - Signature: RSA-2048 private key
+
+        The assertion expires after 5 minutes and includes a unique JTI
+        (JWT ID) for replay protection.
+
+        Examples
+        --------
+        >>> assertion = manager._create_private_key_jwt_assertion("user_123")
+        >>> print(len(assertion) > 100)  # JWT should be substantial
+        True
+        """
 
         current_time = int(time.time())
 
@@ -255,8 +334,45 @@ class Auth0IntegrationManager:
 
     def get_public_key_for_auth0_config(self) -> dict:
         """
-        Generate public key in JWKS format for Auth0 configuration
-        Required for Auth0 to validate Private Key JWT signatures
+        Generate public key in JWKS format for Auth0 configuration.
+
+        Exports the RSA public key in JSON Web Key Set (JWKS) format required
+        by Auth0 to validate Private Key JWT signatures. Must be configured
+        in Auth0 application settings.
+
+        Returns
+        -------
+        dict
+            JWKS structure with structure:
+            - 'keys' : list of dict
+                Array containing single JWK with fields:
+                - 'kty' : 'RSA'
+                - 'use' : 'sig'
+                - 'alg' : 'RS256'
+                - 'kid' : str (key identifier)
+                - 'n' : str (modulus in base64url)
+                - 'e' : str (exponent in base64url)
+
+        Notes
+        -----
+        This JWKS must be configured in Auth0 Dashboard under:
+        Applications > {Your App} > Settings > Advanced Settings >
+        Authentication > JSON Web Token Signature Algorithm > RS256
+
+        The key components (n, e) are base64url-encoded without padding.
+
+        See Also
+        --------
+        authenticate_with_private_key_jwt : Uses this key pair for authentication
+        _create_private_key_jwt_assertion : Signs assertions with private key
+
+        Examples
+        --------
+        >>> jwks = manager.get_public_key_for_auth0_config()
+        >>> print(jwks['keys'][0]['alg'])
+        RS256
+        >>> print(jwks['keys'][0]['kty'])
+        RSA
         """
 
         # Get RSA public key components
@@ -285,10 +401,63 @@ class Auth0IntegrationManager:
 
     async def check_fga_permission(self, user_id: str, object_type: str, object_id: str, relation: str) -> dict:
         """
-        Check permission using Auth0 FGA
+        Check permission using Auth0 FGA (Fine-Grained Authorization).
+
+        Queries Auth0 FGA to determine if a user has a specific permission
+        on a resource. Uses relationship-based access control (ReBAC) model.
+
+        Parameters
+        ----------
+        user_id : str
+            User identifier (prefixed with 'user:' in FGA)
+        object_type : str
+            Resource type (e.g., 'document', 'folder', 'workspace')
+        object_id : str
+            Resource identifier
+        relation : str
+            Permission/relation to check (e.g., 'viewer', 'editor', 'owner')
+
+        Returns
+        -------
+        dict
+            Permission check result with structure:
+            - 'allowed' : bool
+                Whether the permission is granted
+            - 'model_id' : str, optional
+                FGA authorization model ID used
+            - 'duration_ms' : float, optional
+                Query execution time in milliseconds
+            - 'request_id' : str, optional
+                FGA request identifier for debugging
+            - 'error' : str, optional
+                Error message if check failed
+
+        Notes
+        -----
+        FGA check evaluates:
+        1. Direct relationships (user -> object)
+        2. Inherited relationships (via parent objects)
+        3. Computed relationships (based on model rules)
+
+        Performance: Typical latency 10-50ms depending on graph complexity.
 
         FGA API: POST /stores/{store_id}/check
-        SDK Method: fga_client.check()
+
+        See Also
+        --------
+        write_fga_relationship : Create relationship tuples
+        read_fga_relationships : Query existing relationships
+
+        Examples
+        --------
+        >>> result = await manager.check_fga_permission(
+        ...     user_id="user_123",
+        ...     object_type="document",
+        ...     object_id="doc_456",
+        ...     relation="editor"
+        ... )
+        >>> if result['allowed']:
+        ...     print("User can edit document")
         """
 
         try:
@@ -312,10 +481,59 @@ class Auth0IntegrationManager:
 
     async def write_fga_relationship(self, user_id: str, object_type: str, object_id: str, relation: str) -> dict:
         """
-        Write relationship tuple to Auth0 FGA
+        Write relationship tuple to Auth0 FGA.
+
+        Creates a relationship between a user and an object in the FGA
+        authorization graph. Used to grant permissions.
+
+        Parameters
+        ----------
+        user_id : str
+            User identifier (will be prefixed with 'user:')
+        object_type : str
+            Resource type (e.g., 'document', 'folder')
+        object_id : str
+            Resource identifier
+        relation : str
+            Permission/relation to grant (e.g., 'viewer', 'editor', 'owner')
+
+        Returns
+        -------
+        dict
+            Write operation result with structure:
+            - 'success' : bool
+                Whether the write succeeded
+            - 'written_at' : str, optional
+                Timestamp when relationship was written
+            - 'request_id' : str, optional
+                FGA request identifier
+            - 'error' : str, optional
+                Error message if write failed
+
+        Notes
+        -----
+        Relationship tuples follow the format:
+        user:{user_id}#{relation}@{object_type}:{object_id}
+
+        Multiple writes to the same tuple are idempotent.
 
         FGA API: POST /stores/{store_id}/write
-        SDK Method: fga_client.write()
+
+        See Also
+        --------
+        check_fga_permission : Check if permission is granted
+        read_fga_relationships : Query existing relationships
+
+        Examples
+        --------
+        >>> result = await manager.write_fga_relationship(
+        ...     user_id="user_123",
+        ...     object_type="document",
+        ...     object_id="doc_456",
+        ...     relation="editor"
+        ... )
+        >>> if result['success']:
+        ...     print(f"Relationship written at {result['written_at']}")
         """
 
         try:
@@ -338,10 +556,62 @@ class Auth0IntegrationManager:
 
     async def read_fga_relationships(self, user_filter: str = None, object_filter: str = None) -> dict:
         """
-        Read relationship tuples from Auth0 FGA
+        Read relationship tuples from Auth0 FGA.
+
+        Queries existing relationships in the FGA authorization graph.
+        Can filter by user or object to retrieve relevant tuples.
+
+        Parameters
+        ----------
+        user_filter : str, optional
+            Filter by user (e.g., 'user:user_123'). Returns all relationships
+            for this user.
+        object_filter : str, optional
+            Filter by object (e.g., 'document:doc_456'). Returns all relationships
+            to this object.
+
+        Returns
+        -------
+        dict
+            Read operation result with structure:
+            - 'success' : bool
+                Whether the read succeeded
+            - 'tuples' : list of dict
+                Retrieved relationship tuples, each with:
+                - 'user' : str
+                - 'relation' : str
+                - 'object' : str
+                - 'timestamp' : str, optional
+            - 'continuation_token' : str, optional
+                Token for paginated results
+            - 'error' : str, optional
+                Error message if read failed
+
+        Notes
+        -----
+        If neither filter is provided, returns all tuples (may be paginated).
+        Use continuation_token for retrieving additional pages.
 
         FGA API: POST /stores/{store_id}/read
-        SDK Method: fga_client.read()
+
+        See Also
+        --------
+        write_fga_relationship : Create relationships
+        check_fga_permission : Check permissions
+
+        Examples
+        --------
+        >>> # Get all relationships for a user
+        >>> result = await manager.read_fga_relationships(
+        ...     user_filter="user:user_123"
+        ... )
+        >>> for tuple in result['tuples']:
+        ...     print(f"{tuple['user']} {tuple['relation']} {tuple['object']}")
+
+        >>> # Get all users with access to a document
+        >>> result = await manager.read_fga_relationships(
+        ...     object_filter="document:doc_456"
+        ... )
         """
 
         try:
@@ -383,10 +653,53 @@ class Auth0IntegrationManager:
 
     async def get_user_profile(self, user_id: str) -> dict:
         """
-        Get user profile from Auth0 Management API
+        Get user profile from Auth0 Management API.
+
+        Retrieves complete user profile including metadata, login history,
+        and account information.
+
+        Parameters
+        ----------
+        user_id : str
+            Auth0 user identifier (e.g., 'auth0|123456')
+
+        Returns
+        -------
+        dict
+            User profile result with structure:
+            - 'success' : bool
+                Whether the retrieval succeeded
+            - 'user' : dict
+                User profile data including:
+                - 'user_id' : str
+                - 'email' : str
+                - 'name' : str
+                - 'picture' : str
+                - 'last_login' : str
+                - 'login_count' : int
+                - 'created_at' : str
+                - 'updated_at' : str
+                - 'app_metadata' : dict
+                - 'user_metadata' : dict
+            - 'error' : str, optional
+                Error message if retrieval failed
+
+        Notes
+        -----
+        Requires management_api_token to be configured in Auth0Configuration.
 
         Management API: GET /api/v2/users/{id}
-        SDK Method: management_client.users.get()
+
+        See Also
+        --------
+        update_user_metadata : Update user metadata
+
+        Examples
+        --------
+        >>> result = await manager.get_user_profile("auth0|123456")
+        >>> if result['success']:
+        ...     print(f"User: {result['user']['email']}")
+        ...     print(f"Last login: {result['user']['last_login']}")
         """
 
         if not self.management_client:
@@ -416,10 +729,54 @@ class Auth0IntegrationManager:
 
     async def update_user_metadata(self, user_id: str, app_metadata: dict = None, user_metadata: dict = None) -> dict:
         """
-        Update user metadata via Auth0 Management API
+        Update user metadata via Auth0 Management API.
+
+        Updates application-managed metadata (app_metadata) and/or user-editable
+        metadata (user_metadata) for a user account.
+
+        Parameters
+        ----------
+        user_id : str
+            Auth0 user identifier (e.g., 'auth0|123456')
+        app_metadata : dict, optional
+            Application metadata (only accessible by management API)
+        user_metadata : dict, optional
+            User metadata (can be edited by users)
+
+        Returns
+        -------
+        dict
+            Update result with structure:
+            - 'success' : bool
+                Whether the update succeeded
+            - 'updated_user' : dict, optional
+                Complete updated user profile
+            - 'error' : str, optional
+                Error message if update failed
+
+        Notes
+        -----
+        app_metadata vs user_metadata:
+        - app_metadata: Read-only to users, used for roles, permissions, etc.
+        - user_metadata: Editable by users, used for preferences, settings, etc.
+
+        Requires management_api_token to be configured.
 
         Management API: PATCH /api/v2/users/{id}
-        SDK Method: management_client.users.update()
+
+        See Also
+        --------
+        get_user_profile : Retrieve user profile
+
+        Examples
+        --------
+        >>> result = await manager.update_user_metadata(
+        ...     user_id="auth0|123456",
+        ...     app_metadata={"roles": ["admin", "editor"]},
+        ...     user_metadata={"theme": "dark", "language": "en"}
+        ... )
+        >>> if result['success']:
+        ...     print("User metadata updated")
         """
 
         if not self.management_client:
@@ -445,10 +802,59 @@ class Auth0IntegrationManager:
 
     async def store_ai_credentials_in_vault(self, ai_agent_id: str, credentials: dict, expires_in: int = 3600) -> dict:
         """
-        Store AI agent credentials in Auth0 Token Vault
-        Part of Auth for GenAI product (April 2025 launch)
+        Store AI agent credentials in Auth0 Token Vault.
+
+        Securely stores credentials for AI agents using Auth0 Token Vault,
+        part of Auth for GenAI product. Credentials are encrypted at rest
+        and have configurable expiration.
+
+        Parameters
+        ----------
+        ai_agent_id : str
+            AI agent identifier
+        credentials : dict
+            Credentials to store (API keys, tokens, etc.)
+        expires_in : int, default 3600
+            Expiration time in seconds (default 1 hour)
+
+        Returns
+        -------
+        dict
+            Storage result with structure:
+            - 'success' : bool
+                Whether storage succeeded
+            - 'credential_id' : str, optional
+                Unique identifier for stored credentials
+            - 'expires_at' : str, optional
+                Expiration timestamp
+            - 'error' : str, optional
+                Error message if storage failed
+
+        Notes
+        -----
+        Part of Auth0's Auth for GenAI product (launched April 2025).
+        Credentials are encrypted using AES-256 and stored securely.
+
+        Requires token_vault_endpoint and token_vault_api_key to be configured.
 
         Custom API: POST /token-vault/store
+
+        See Also
+        --------
+        retrieve_ai_credentials_from_vault : Retrieve stored credentials
+
+        Examples
+        --------
+        >>> result = await manager.store_ai_credentials_in_vault(
+        ...     ai_agent_id="agent_123",
+        ...     credentials={
+        ...         "api_key": "sk-...",
+        ...         "endpoint": "https://api.example.com"
+        ...     },
+        ...     expires_in=7200
+        ... )
+        >>> if result['success']:
+        ...     print(f"Stored with ID: {result['credential_id']}")
         """
 
         if not self.config.token_vault_endpoint:
@@ -482,9 +888,54 @@ class Auth0IntegrationManager:
 
     async def retrieve_ai_credentials_from_vault(self, ai_agent_id: str, credential_id: str) -> dict:
         """
-        Retrieve AI agent credentials from Auth0 Token Vault
+        Retrieve AI agent credentials from Auth0 Token Vault.
+
+        Retrieves previously stored credentials for an AI agent from Token Vault.
+        Credentials are decrypted and returned if not expired.
+
+        Parameters
+        ----------
+        ai_agent_id : str
+            AI agent identifier (must match stored agent ID)
+        credential_id : str
+            Unique identifier of stored credentials
+
+        Returns
+        -------
+        dict
+            Retrieval result with structure:
+            - 'success' : bool
+                Whether retrieval succeeded
+            - 'credentials' : dict, optional
+                Decrypted credentials
+            - 'expires_at' : str, optional
+                Expiration timestamp
+            - 'metadata' : dict
+                Storage metadata including stored_at, client_id
+            - 'error' : str, optional
+                Error message if retrieval failed
+
+        Notes
+        -----
+        Requires token_vault_endpoint and token_vault_api_key to be configured.
+
+        Agent ID verification prevents unauthorized credential access.
 
         Custom API: GET /token-vault/retrieve/{credential_id}
+
+        See Also
+        --------
+        store_ai_credentials_in_vault : Store credentials
+
+        Examples
+        --------
+        >>> result = await manager.retrieve_ai_credentials_from_vault(
+        ...     ai_agent_id="agent_123",
+        ...     credential_id="cred_abc123"
+        ... )
+        >>> if result['success']:
+        ...     api_key = result['credentials']['api_key']
+        ...     print(f"Retrieved credentials (expires: {result['expires_at']})")
         """
 
         if not self.config.token_vault_endpoint:
@@ -647,7 +1098,45 @@ class Auth0IntegrationManager:
 
 
 def create_auth0_config_from_env() -> Auth0Configuration:
-    """Create Auth0 configuration from environment variables"""
+    """
+    Create Auth0 configuration from environment variables.
+
+    Reads Auth0 configuration from standard environment variables and
+    constructs an Auth0Configuration instance.
+
+    Returns
+    -------
+    Auth0Configuration
+        Complete Auth0 configuration loaded from environment
+
+    Notes
+    -----
+    Required environment variables:
+    - AUTH0_DOMAIN: Auth0 tenant domain
+    - AUTH0_CLIENT_ID: Application client ID
+    - AUTH0_AUDIENCE: API audience
+
+    Optional environment variables:
+    - AUTH0_CLIENT_SECRET: Client secret (not needed for Private Key JWT)
+    - AUTH0_MANAGEMENT_TOKEN: Management API token
+    - AUTH0_FGA_STORE_ID: FGA store identifier
+    - AUTH0_FGA_CLIENT_ID: FGA client ID
+    - AUTH0_FGA_CLIENT_SECRET: FGA client secret
+    - AUTH0_FGA_API_URL: FGA API endpoint (default: US region)
+    - AUTH0_FGA_MODEL_ID: FGA authorization model ID
+    - AUTH0_TOKEN_VAULT_ENDPOINT: Token Vault endpoint
+    - AUTH0_TOKEN_VAULT_API_KEY: Token Vault API key
+
+    Examples
+    --------
+    >>> import os
+    >>> os.environ['AUTH0_DOMAIN'] = 'tenant.auth0.com'
+    >>> os.environ['AUTH0_CLIENT_ID'] = 'client_id'
+    >>> os.environ['AUTH0_AUDIENCE'] = 'https://api.example.com'
+    >>> config = create_auth0_config_from_env()
+    >>> print(config.domain)
+    tenant.auth0.com
+    """
     import os
 
     return Auth0Configuration(
@@ -668,8 +1157,56 @@ def create_auth0_config_from_env() -> Auth0Configuration:
 
 async def setup_auth0_application_for_private_key_jwt(config: Auth0Configuration, public_key_jwks: dict) -> dict:
     """
-    Setup Auth0 application for Private Key JWT authentication
-    This would typically be done via Auth0 Management API or Dashboard
+    Setup Auth0 application for Private Key JWT authentication.
+
+    Provides configuration instructions and settings needed to configure
+    an Auth0 application for Private Key JWT authentication method.
+
+    Parameters
+    ----------
+    config : Auth0Configuration
+        Auth0 configuration instance
+    public_key_jwks : dict
+        JWKS containing public key from get_public_key_for_auth0_config()
+
+    Returns
+    -------
+    dict
+        Configuration instructions with structure:
+        - 'message' : str
+            Setup instructions
+        - 'settings' : dict
+            Application settings to configure in Auth0
+        - 'jwks_endpoint' : str
+            JWKS endpoint URL
+        - 'documentation' : str
+            Link to Auth0 documentation
+
+    Notes
+    -----
+    This function returns configuration instructions. Actual setup must be
+    performed in Auth0 Dashboard or via Management API.
+
+    Configuration steps:
+    1. Set token_endpoint_auth_method to 'private_key_jwt'
+    2. Add public JWKS to application settings
+    3. Configure grant types for JWT bearer
+    4. Enable OIDC conformant mode
+
+    See Also
+    --------
+    Auth0IntegrationManager.get_public_key_for_auth0_config : Generate JWKS
+
+    Examples
+    --------
+    >>> manager = Auth0IntegrationManager(config)
+    >>> jwks = manager.get_public_key_for_auth0_config()
+    >>> instructions = await setup_auth0_application_for_private_key_jwt(
+    ...     config, jwks
+    ... )
+    >>> print(instructions['message'])
+    Configure your Auth0 application with these settings
+    >>> print(instructions['settings']['application_settings'])
     """
 
     setup_instructions = {
