@@ -1,0 +1,22 @@
+
+Code Original GitHub repository
+https://github.com/hipvlady/subzero/
+
+Hackaton E2E GitHub Repositry
+https://github.com/hipvlady/ztag-demo
+
+
+Hackaton E2E local folder:
+/Users/vladparakhin/projects/ztag-demo
+
+
+Auth0 Tenant Details:
+Application Name:
+ZTAG
+
+Domain
+dev-wqm22b25ezvskulh.us.auth0.com
+
+Client ID
+o7HqssxbqgG1TVeZbz6rtbrvn8wfMh8F
+
