@@ -3,10 +3,11 @@ Copyright (c) 2025 Subzero Contributors
 SPDX-License-Identifier: MIT
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore", env_file=".env", case_sensitive=True)
     # Auth0 Configuration
     AUTH0_DOMAIN: str = "example.auth0.com"
     AUTH0_CLIENT_ID: str = "test_client_id"
@@ -103,10 +104,6 @@ class Settings(BaseSettings):
     # Redis Configuration
     REDIS_URL: str = "redis://localhost:6379"
     REDIS_PASSWORD: str | None = None
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 settings = Settings()
