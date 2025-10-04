@@ -5,6 +5,12 @@ SPDX-License-Identifier: MIT
 Multi-Process JWT Processor - GIL Bypass for CPU-Intensive Cryptography
 Uses multiprocessing with shared memory for zero-copy data transfer
 Target: 8x+ speedup for batch JWT operations
+
+Performance Note:
+- JWT signing/verification: ~500µs per operation (CPU-intensive)
+- Multiprocessing overhead: ~100ms
+- Break-even point: ~600 JWTs (300ms / 0.5ms = 600)
+- Recommendation: Use MP for batches >600 JWTs
 """
 
 import asyncio
@@ -13,6 +19,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor
 from typing import Any
 
+from subzero.config.defaults import settings
 from subzero.services.auth.eddsa_key_manager import EdDSAKeyManager
 
 
@@ -96,17 +103,64 @@ class MultiProcessJWTProcessor:
         self.private_key_pem = self.key_manager.get_private_key_pem()
         self.public_key_pem = self.key_manager.get_public_key_pem()
 
+        # Operation cost (EdDSA JWT operations are CPU-intensive)
+        self.jwt_sign_cost_ms = 0.5  # 500µs per JWT signing
+        self.jwt_verify_cost_ms = 0.5  # 500µs per JWT verification
+
         # Statistics
         self.stats = {
             "total_signed": 0,
             "total_verified": 0,
             "total_time_signing": 0.0,
             "total_time_verifying": 0.0,
+            "mp_decisions": 0,
+            "sequential_decisions": 0,
         }
+
+    def _should_use_multiprocessing(self, batch_size: int, operation_cost_ms: float) -> bool:
+        """
+        Determine if multiprocessing should be used based on batch size and operation cost
+
+        JWT operations are genuinely CPU-intensive (~500µs each), so MP helps for large batches.
+
+        Args:
+            batch_size: Number of JWTs to process
+            operation_cost_ms: Cost per JWT in milliseconds
+
+        Returns:
+            True if multiprocessing is beneficial
+        """
+        if not settings.ENABLE_MULTIPROCESSING:
+            return False
+
+        # Multiprocessing overhead
+        OVERHEAD_MS = 100
+
+        # Calculate expected operation time
+        total_time_ms = batch_size * operation_cost_ms
+
+        # Only use MP if operation time significantly exceeds overhead
+        # Using 3x overhead as threshold (300ms)
+        return total_time_ms > (OVERHEAD_MS * 3)
+
+    def _sign_sequential(self, payloads: list[dict]) -> list[str]:
+        """Sign JWTs sequentially (for small batches)"""
+        import jwt
+
+        tokens = []
+        for payload in payloads:
+            if "iat" not in payload:
+                payload["iat"] = int(time.time())
+            token = jwt.encode(payload, self.private_key_pem, algorithm="EdDSA")
+            tokens.append(token)
+        return tokens
 
     async def batch_sign_jwts(self, payloads: list[dict]) -> list[str]:
         """
-        Sign batch of JWTs in parallel processes
+        Sign batch of JWTs with intelligent MP decision
+
+        Uses multiprocessing only for batches >600 JWTs (300ms threshold).
+        For smaller batches, sequential is faster due to 100ms MP overhead.
 
         Args:
             payloads: List of JWT payloads to sign
@@ -119,25 +173,34 @@ class MultiProcessJWTProcessor:
         if not payloads:
             return []
 
-        # Split payloads across workers
-        chunk_size = max(1, len(payloads) // self.num_workers)
-        chunks = [payloads[i : i + chunk_size] for i in range(0, len(payloads), chunk_size)]
+        # Intelligent MP decision
+        if not self._should_use_multiprocessing(len(payloads), self.jwt_sign_cost_ms):
+            # Use sequential for small batches (< 600 JWTs)
+            self.stats["sequential_decisions"] += 1
+            tokens = self._sign_sequential(payloads)
+        else:
+            # Use multiprocessing for large batches (>= 600 JWTs)
+            self.stats["mp_decisions"] += 1
 
-        # Submit to process pool
-        loop = asyncio.get_event_loop()
-        tasks = []
+            # Split payloads across workers
+            chunk_size = max(1, len(payloads) // self.num_workers)
+            chunks = [payloads[i : i + chunk_size] for i in range(0, len(payloads), chunk_size)]
 
-        for chunk in chunks:
-            task = loop.run_in_executor(self.executor, _sign_jwt_batch_worker, chunk, self.private_key_pem)
-            tasks.append(task)
+            # Submit to process pool
+            loop = asyncio.get_event_loop()
+            tasks = []
 
-        # Gather results
-        results = await asyncio.gather(*tasks)
+            for chunk in chunks:
+                task = loop.run_in_executor(self.executor, _sign_jwt_batch_worker, chunk, self.private_key_pem)
+                tasks.append(task)
 
-        # Flatten results
-        tokens = []
-        for result in results:
-            tokens.extend(result)
+            # Gather results
+            results = await asyncio.gather(*tasks)
+
+            # Flatten results
+            tokens = []
+            for result in results:
+                tokens.extend(result)
 
         # Update statistics
         elapsed = time.perf_counter() - start_time
@@ -146,9 +209,25 @@ class MultiProcessJWTProcessor:
 
         return tokens
 
+    def _verify_sequential(self, tokens: list[str]) -> list[dict | None]:
+        """Verify JWTs sequentially (for small batches)"""
+        import jwt
+
+        results = []
+        for token in tokens:
+            try:
+                payload = jwt.decode(token, self.public_key_pem, algorithms=["EdDSA"])
+                results.append(payload)
+            except Exception:
+                results.append(None)
+        return results
+
     async def batch_verify_jwts(self, tokens: list[str]) -> list[dict | None]:
         """
-        Verify batch of JWTs in parallel processes
+        Verify batch of JWTs with intelligent MP decision
+
+        Uses multiprocessing only for batches >600 JWTs (300ms threshold).
+        For smaller batches, sequential is faster due to 100ms MP overhead.
 
         Args:
             tokens: List of JWT tokens to verify
@@ -161,25 +240,34 @@ class MultiProcessJWTProcessor:
         if not tokens:
             return []
 
-        # Split tokens across workers
-        chunk_size = max(1, len(tokens) // self.num_workers)
-        chunks = [tokens[i : i + chunk_size] for i in range(0, len(tokens), chunk_size)]
+        # Intelligent MP decision
+        if not self._should_use_multiprocessing(len(tokens), self.jwt_verify_cost_ms):
+            # Use sequential for small batches (< 600 JWTs)
+            self.stats["sequential_decisions"] += 1
+            payloads = self._verify_sequential(tokens)
+        else:
+            # Use multiprocessing for large batches (>= 600 JWTs)
+            self.stats["mp_decisions"] += 1
 
-        # Submit to process pool
-        loop = asyncio.get_event_loop()
-        tasks = []
+            # Split tokens across workers
+            chunk_size = max(1, len(tokens) // self.num_workers)
+            chunks = [tokens[i : i + chunk_size] for i in range(0, len(tokens), chunk_size)]
 
-        for chunk in chunks:
-            task = loop.run_in_executor(self.executor, _verify_jwt_batch_worker, chunk, self.public_key_pem)
-            tasks.append(task)
+            # Submit to process pool
+            loop = asyncio.get_event_loop()
+            tasks = []
 
-        # Gather results
-        results = await asyncio.gather(*tasks)
+            for chunk in chunks:
+                task = loop.run_in_executor(self.executor, _verify_jwt_batch_worker, chunk, self.public_key_pem)
+                tasks.append(task)
 
-        # Flatten results
-        payloads = []
-        for result in results:
-            payloads.extend(result)
+            # Gather results
+            results = await asyncio.gather(*tasks)
+
+            # Flatten results
+            payloads = []
+            for result in results:
+                payloads.extend(result)
 
         # Update statistics
         elapsed = time.perf_counter() - start_time

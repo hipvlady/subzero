@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # Try .env.demo first (for testing), then .env, then environment variables only
     _env_file = ".env.demo" if os.path.exists(".env.demo") else ".env"
-    model_config = SettingsConfigDict(extra="ignore", env_file=_env_file, case_sensitive=True)
+    model_config = SettingsConfigDict(extra="allow", env_file=_env_file, case_sensitive=True)
     # Auth0 Configuration
     AUTH0_DOMAIN: str = "example.auth0.com"
     AUTH0_CLIENT_ID: str = "test_client_id"

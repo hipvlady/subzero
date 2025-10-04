@@ -117,8 +117,19 @@ class ISPMEngine:
         self.remediation_count = 0
         self.alert_count = 0
 
+        # Running state
+        self._running = False
+
         # Initialize default compliance rules
         self._init_compliance_rules()
+
+    async def start(self):
+        """Start the ISPM engine"""
+        if self._running:
+            return
+
+        self._running = True
+        print("🛡️  ISPM Engine started")
 
     def _init_compliance_rules(self):
         """Initialize default compliance rules"""

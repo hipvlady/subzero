@@ -12,7 +12,12 @@ Key Design Principles:
 2. CPU-bound operations → multiprocessing (bypass GIL)
 3. Shared memory for zero-copy data transfer
 4. Process pools for amortized startup costs
-5. Intelligent workload routing based on operation type
+5. Intelligent workload routing based on operation type and cost
+
+Intelligent Multiprocessing Decision:
+- Uses 300ms threshold (3x the 100ms MP overhead)
+- Only applies MP when: batch_size × operation_cost_ms > 300
+- Avoids MP overhead for lightweight operations
 
 Performance Targets:
 - Request coalescing: 60% faster key generation
@@ -32,6 +37,8 @@ from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
+
+from subzero.config.defaults import settings
 
 try:
     import numpy as np
@@ -96,6 +103,29 @@ class CPUBoundProcessor:
 
         logger.info(f"CPUBoundProcessor initialized with {self.max_workers} workers")
 
+    def _should_use_multiprocessing(self, batch_size: int, operation_cost_ms: float) -> bool:
+        """
+        Determine if multiprocessing should be used based on batch size and operation cost
+
+        Args:
+            batch_size: Number of items in batch
+            operation_cost_ms: Estimated cost per operation in milliseconds
+
+        Returns:
+            True if multiprocessing is beneficial
+        """
+        if not settings.ENABLE_MULTIPROCESSING:
+            return False
+
+        # Multiprocessing overhead is ~100ms (process startup, IPC, serialization)
+        OVERHEAD_MS = 100
+
+        # Calculate expected operation time
+        total_time_ms = batch_size * operation_cost_ms
+
+        # Only use MP if operation time > 3x overhead (300ms threshold)
+        return total_time_ms > (OVERHEAD_MS * 3)
+
     def _initialize_pools(self):
         """Initialize process pools for different workload types"""
         try:
@@ -124,10 +154,14 @@ class CPUBoundProcessor:
         """
         Generate coalescing keys in parallel for batch requests
 
+        Cost: ~0.1ms per key (hash generation + MD5)
+        Threshold: 3000 keys (300ms / 0.1ms = 3000)
+
         Performance target: 60% faster than sequential processing
         """
-        if not self.cpu_pool or len(contexts) < 10:
-            # Use sequential processing for small batches
+        # Intelligent MP decision based on cost
+        if not self.cpu_pool or not self._should_use_multiprocessing(len(contexts), operation_cost_ms=0.1):
+            # Use sequential processing for small batches (< 3000 keys)
             return [_generate_coalescing_key_sync(ctx) for ctx in contexts]
 
         start_time = time.perf_counter()
@@ -172,10 +206,14 @@ class CPUBoundProcessor:
         """
         Process analytics and performance metrics in parallel
 
+        Cost: ~0.5ms per metric (statistical calculations)
+        Threshold: 600 metrics (300ms / 0.5ms = 600)
+
         Performance target: 4x speedup for large datasets
         """
-        if not self.analytics_pool or len(metrics_data) < 50:
-            # Sequential processing for small datasets
+        # Intelligent MP decision based on cost
+        if not self.analytics_pool or not self._should_use_multiprocessing(len(metrics_data), operation_cost_ms=0.5):
+            # Sequential processing for small datasets (< 600 metrics)
             return _calculate_analytics_sync(metrics_data)
 
         start_time = time.perf_counter()
@@ -226,9 +264,16 @@ class CPUBoundProcessor:
         """
         Perform pattern matching on batch of texts in parallel
 
+        Cost: ~0.2ms per text × num_patterns (regex compilation + matching)
+        Threshold: Depends on pattern count
+
         Performance target: 8x speedup for regex operations
         """
-        if not self.pattern_pool or len(texts) < 20:
+        # Calculate cost based on patterns (each pattern adds overhead)
+        operation_cost_ms = 0.2 * len(patterns)
+
+        # Intelligent MP decision based on cost
+        if not self.pattern_pool or not self._should_use_multiprocessing(len(texts), operation_cost_ms=operation_cost_ms):
             # Sequential processing for small batches
             return [_match_patterns_sync(text, patterns) for text in texts]
 
@@ -275,10 +320,14 @@ class CPUBoundProcessor:
         """
         Perform cache cleanup operations in parallel
 
+        Cost: ~0.001ms per entry (timestamp comparison)
+        Threshold: 300,000 entries (300ms / 0.001ms = 300,000)
+
         Performance target: 3x speedup for large caches
         """
-        if not self.cpu_pool or len(cache_entries) < 100:
-            # Sequential cleanup for small caches
+        # Intelligent MP decision based on cost
+        if not self.cpu_pool or not self._should_use_multiprocessing(len(cache_entries), operation_cost_ms=0.001):
+            # Sequential cleanup for small caches (< 300K entries)
             return _cleanup_cache_sync(cache_entries)
 
         start_time = time.perf_counter()

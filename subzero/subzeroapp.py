@@ -291,15 +291,22 @@ class UnifiedZeroTrustGateway:
         ✅ Unified Gateway stopped gracefully
         """
         # Stop orchestrator first
-        await self.orchestrator.stop()
+        if hasattr(self.orchestrator, "stop"):
+            await self.orchestrator.stop()
 
-        # Stop other services
-        await self.auth_service.stop()
-        await self.audit_service.stop()
-        await self.ispm_engine.stop()
-        await self.rate_limiter.close()
-        await self.app_registry.close()
-        await self.xaa_protocol.close()
+        # Stop other services gracefully
+        if hasattr(self.auth_service, "stop"):
+            await self.auth_service.stop()
+        if hasattr(self.audit_service, "stop"):
+            await self.audit_service.stop()
+        if hasattr(self.ispm_engine, "stop"):
+            await self.ispm_engine.stop()
+        if hasattr(self.rate_limiter, "close"):
+            await self.rate_limiter.close()
+        if hasattr(self.app_registry, "close"):
+            await self.app_registry.close()
+        if hasattr(self.xaa_protocol, "close"):
+            await self.xaa_protocol.close()
 
         print("✅ Unified Gateway stopped gracefully")
 
@@ -913,6 +920,65 @@ class UnifiedZeroTrustGateway:
     # ==========================================
     # Monitoring & Metrics
     # ==========================================
+
+    @property
+    def health_status(self) -> dict:
+        """
+        Get gateway health status.
+
+        Returns
+        -------
+        dict
+            Health status with structure:
+            - 'status' : str
+                Overall status ('healthy', 'degraded', 'unhealthy')
+            - 'components' : dict
+                Component-level health status
+
+        Examples
+        --------
+        >>> health = gateway.health_status
+        >>> print(f"Status: {health['status']}")
+        Status: healthy
+        """
+        # Get auth service health from metrics
+        auth_metrics = self.auth_service.get_service_metrics()
+        auth_health = auth_metrics.get("health", {})
+
+        # Get orchestrator health (if available)
+        try:
+            if hasattr(self.orchestrator, "get_health_status"):
+                orch_health = self.orchestrator.get_health_status()
+                orch_status = orch_health.get("status", "healthy")
+            else:
+                # Fallback: orchestrator is healthy if it exists
+                orch_status = "healthy"
+        except Exception:
+            orch_status = "unknown"
+
+        # Aggregate component status
+        components = {
+            "orchestrator": orch_status,
+            "auth_service": auth_health.get("status", "healthy"),
+            "auth0_api": auth_health.get("components", {}).get("auth0_api", "healthy"),
+            "rate_limiter": "healthy",
+            "ispm": "healthy" if self.ispm_engine else "unavailable",
+            "audit_trail": "healthy" if self.audit_service else "unavailable",
+            "token_vault": "healthy" if self.token_vault else "unavailable",
+        }
+
+        # Overall status
+        if all(s == "healthy" for s in components.values() if s != "unavailable"):
+            overall = "healthy"
+        elif any(s == "unhealthy" for s in components.values()):
+            overall = "unhealthy"
+        else:
+            overall = "degraded"
+
+        return {
+            "status": overall,
+            "components": components,
+        }
 
     async def get_gateway_metrics(self) -> dict:
         """

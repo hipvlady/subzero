@@ -15,9 +15,11 @@ Features:
 
 import asyncio
 import time
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
+
+from subzero.config.defaults import settings
 
 
 class RelationType(str, Enum):
@@ -152,14 +154,17 @@ class ReBACEngine:
         self.by_object: dict[str, set[AuthzTuple]] = defaultdict(set)
         self.by_subject: dict[str, set[AuthzTuple]] = defaultdict(set)
 
-        # Permission cache: (object, relation, subject) -> result
-        self.cache: dict[frozenset, tuple[bool, float]] = {}
+        # Permission cache with LRU eviction: (object, relation, subject) -> result
+        # Using OrderedDict for O(1) LRU eviction (move_to_end + popitem)
+        self.cache: OrderedDict[frozenset, tuple[bool, float]] = OrderedDict()
+        self.cache_capacity = settings.CACHE_CAPACITY  # Default: 10,000 entries
         self.cache_ttl = 900  # 15 minutes (optimized for higher hit ratio)
 
         # Performance metrics
         self.check_count = 0
         self.cache_hits = 0
         self.cache_misses = 0
+        self.cache_evictions = 0
 
         # Initialize default schema
         self._init_default_schema()
@@ -307,15 +312,26 @@ class ReBACEngine:
             result, cached_at = self.cache[cache_key]
             if time.time() - cached_at < self.cache_ttl:
                 self.cache_hits += 1
+                # Move to end (mark as recently used for LRU)
+                self.cache.move_to_end(cache_key)
                 return result
+            else:
+                # TTL expired, remove from cache
+                del self.cache[cache_key]
 
         self.cache_misses += 1
 
         # Perform check
         result = await self._check_relation(object_type, object_id, relation, subject_type, subject_id)
 
-        # Cache result
+        # Cache result with LRU eviction
         self.cache[cache_key] = (result, time.time())
+
+        # Enforce cache capacity (LRU eviction)
+        if len(self.cache) > self.cache_capacity:
+            # Remove oldest entry (FIFO behavior from OrderedDict)
+            self.cache.popitem(last=False)
+            self.cache_evictions += 1
 
         latency_ms = (time.perf_counter() - start_time) * 1000
 
@@ -510,6 +526,8 @@ class ReBACEngine:
             "cache_misses": self.cache_misses,
             "cache_hit_rate_percent": cache_hit_rate,
             "cache_size": len(self.cache),
+            "cache_capacity": self.cache_capacity,
+            "cache_evictions": self.cache_evictions,
             "object_types": len(self.object_types),
         }
 

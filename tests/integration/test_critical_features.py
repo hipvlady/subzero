@@ -123,6 +123,12 @@ class TestMCPOAuth:
     @pytest.mark.asyncio
     async def test_token_introspection(self, oauth_provider):
         """Test Token Introspection - RFC 7662"""
+        import time
+
+        import jwt
+
+        from subzero.services.mcp.oauth import OAuthToken
+
         # Register client first
         client_result = await oauth_provider.register_dynamic_client(
             agent_metadata={
@@ -132,10 +138,23 @@ class TestMCPOAuth:
             }
         )
 
-        # Create token manually for testing
-        from subzero.services.mcp.oauth import OAuthToken
+        # Generate a real JWT for testing
+        now = int(time.time())
+        jwt_payload = {
+            "sub": "test_agent",
+            "aud": "mcp:api",
+            "iss": "test_issuer",
+            "exp": now + 3600,
+            "iat": now,
+            "jti": "test_jti_123",
+            "scope": "mcp:agent",
+            "client_id": client_result["client_id"],
+        }
 
-        test_token = "test_access_token_12345"
+        # Create unsigned JWT (for testing purposes)
+        test_token = jwt.encode(jwt_payload, "secret", algorithm="HS256")
+
+        # Create OAuthToken
         oauth_token = OAuthToken(
             access_token=test_token,
             token_type="Bearer",

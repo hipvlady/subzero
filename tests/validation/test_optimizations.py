@@ -212,12 +212,19 @@ class TestJITOptimizedHotPaths:
                 }
             )
 
-        # Benchmark JIT-compiled version
+        # IMPORTANT: Warmup run for JIT compilation
+        # First call triggers Numba compilation, subsequent calls are fast
+        print("\n🔥 Warming up JIT compilation...")
+        warmup_events = events[:100]  # Small warmup
+        _ = auth.compute_risk_scores(warmup_events)
+        print("   ✅ JIT functions compiled and cached")
+
+        # Benchmark JIT-compiled version (now fully compiled)
         start = time.perf_counter()
         risk_scores = auth.compute_risk_scores(events)
         jit_time = time.perf_counter() - start
 
-        print("\n🚀 JIT-Optimized Risk Scoring:")
+        print("\n🚀 JIT-Optimized Risk Scoring (post-warmup):")
         print(f"   Events: {len(events)}")
         print(f"   JIT Time: {jit_time*1000:.2f}ms")
         print(f"   Throughput: {len(events)/jit_time:.0f} events/sec")
@@ -225,9 +232,9 @@ class TestJITOptimizedHotPaths:
         assert len(risk_scores) == len(events)
         assert all(0.0 <= score <= 1.0 for score in risk_scores)
 
-        # Should process at least 2k events/sec (JIT compilation has initial overhead)
+        # After warmup, should process at least 5k events/sec (full JIT performance)
         throughput = len(events) / jit_time
-        assert throughput >= 2_000, f"Throughput {throughput:.0f} events/sec below 2k target"
+        assert throughput >= 5_000, f"Throughput {throughput:.0f} events/sec below 5k target (post-warmup)"
 
 
 class TestAdaptiveCacheTTL:

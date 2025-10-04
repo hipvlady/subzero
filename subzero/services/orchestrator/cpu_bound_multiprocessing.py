@@ -9,8 +9,11 @@ Offloads CPU-intensive operations to separate processes
 import asyncio
 import multiprocessing as mp
 import re
+import time
 from concurrent.futures import ProcessPoolExecutor
 from typing import Any
+
+from subzero.config.defaults import settings
 
 
 class CPUBoundProcessor:
@@ -36,6 +39,30 @@ class CPUBoundProcessor:
         self.num_workers = workers or mp.cpu_count()
         self.executor = ProcessPoolExecutor(max_workers=self.num_workers)
 
+    def _should_use_multiprocessing(self, batch_size: int, operation_cost_ms: float = 0.01) -> bool:
+        """
+        Determine if multiprocessing should be used based on batch size and operation cost
+
+        Args:
+            batch_size: Number of items in batch
+            operation_cost_ms: Estimated cost per operation in milliseconds
+
+        Returns:
+            True if multiprocessing is beneficial
+        """
+        if not settings.ENABLE_MULTIPROCESSING:
+            return False
+
+        # Multiprocessing overhead is ~100ms (process startup, IPC, serialization)
+        MULTIPROCESSING_OVERHEAD_MS = 100
+
+        # Calculate expected operation time
+        total_operation_time_ms = batch_size * operation_cost_ms
+
+        # Only use multiprocessing if operation time significantly exceeds overhead
+        # Using 3x overhead as threshold (benefit must be clear)
+        return total_operation_time_ms > (MULTIPROCESSING_OVERHEAD_MS * 3)
+
     async def process_batch_coalescing_keys(self, contexts: list[Any]) -> list[str]:
         """
         Process batch of contexts to generate coalescing keys
@@ -46,8 +73,6 @@ class CPUBoundProcessor:
         Returns:
             List of coalescing keys
         """
-        loop = asyncio.get_event_loop()
-
         # Extract payloads - handle both dicts and objects
         payloads = []
         for c in contexts:
@@ -56,7 +81,14 @@ class CPUBoundProcessor:
             else:
                 payloads.append(c.payload if hasattr(c, "payload") else c)
 
-        # Offload to process pool
+        # Hash key generation is very fast (~1-2μs per operation)
+        # Only use multiprocessing for very large batches
+        if not self._should_use_multiprocessing(len(payloads), operation_cost_ms=0.002):
+            # Use sequential processing for small batches
+            return _generate_coalescing_keys_batch(payloads)
+
+        # Offload to process pool for large batches
+        loop = asyncio.get_event_loop()
         keys = await loop.run_in_executor(self.executor, _generate_coalescing_keys_batch, payloads)
 
         return keys
@@ -71,9 +103,12 @@ class CPUBoundProcessor:
         Returns:
             Aggregated analytics results
         """
-        loop = asyncio.get_event_loop()
+        # Analytics calculation is relatively lightweight
+        # Only use multiprocessing for large datasets
+        if not self._should_use_multiprocessing(len(data), operation_cost_ms=0.01):
+            return _calculate_analytics_batch(data)
 
-        # Offload to process pool
+        loop = asyncio.get_event_loop()
         results = await loop.run_in_executor(self.executor, _calculate_analytics_batch, data)
 
         return results
@@ -89,10 +124,37 @@ class CPUBoundProcessor:
         Returns:
             List of matches for each text
         """
-        loop = asyncio.get_event_loop()
+        # Pattern matching can be CPU-intensive for many patterns
+        # Cost is roughly 0.1ms per text-pattern combination
+        operation_cost = 0.1 * len(patterns)
 
-        # Offload to process pool
+        if not self._should_use_multiprocessing(len(texts), operation_cost_ms=operation_cost):
+            return _match_patterns_parallel(texts, patterns)
+
+        loop = asyncio.get_event_loop()
         results = await loop.run_in_executor(self.executor, _match_patterns_parallel, texts, patterns)
+
+        return results
+
+    async def process_pattern_matching_batch(self, texts: list[str], patterns: list[str]) -> list[dict]:
+        """
+        Match patterns against texts and return detailed results
+
+        Args:
+            texts: List of texts to match
+            patterns: List of regex patterns
+
+        Returns:
+            List of match result dicts
+        """
+        # Pattern matching can be CPU-intensive
+        operation_cost = 0.1 * len(patterns)
+
+        if not self._should_use_multiprocessing(len(texts), operation_cost_ms=operation_cost):
+            return _match_patterns_detailed(texts, patterns)
+
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(self.executor, _match_patterns_detailed, texts, patterns)
 
         return results
 
@@ -107,12 +169,33 @@ class CPUBoundProcessor:
         Returns:
             Number of cleaned entries
         """
-        loop = asyncio.get_event_loop()
+        # Cache cleanup is lightweight
+        if not self._should_use_multiprocessing(len(cache_keys), operation_cost_ms=0.001):
+            return _cleanup_cache_keys(cache_keys, expired_before)
 
-        # Offload to process pool
+        loop = asyncio.get_event_loop()
         count = await loop.run_in_executor(self.executor, _cleanup_cache_keys, cache_keys, expired_before)
 
         return count
+
+    async def process_cache_cleanup(self, cache_entries: dict[str, dict]) -> list[str]:
+        """
+        Process cache cleanup and return expired keys
+
+        Args:
+            cache_entries: Dictionary of cache entries with metadata
+
+        Returns:
+            List of expired cache keys
+        """
+        # Cache cleanup is lightweight
+        if not self._should_use_multiprocessing(len(cache_entries), operation_cost_ms=0.001):
+            return _cleanup_cache_entries(cache_entries)
+
+        loop = asyncio.get_event_loop()
+        expired_keys = await loop.run_in_executor(self.executor, _cleanup_cache_entries, cache_entries)
+
+        return expired_keys
 
     async def shutdown(self):
         """Shutdown processor"""
@@ -136,33 +219,37 @@ def _generate_coalescing_keys_batch(payloads: list[dict]) -> list[str]:
     return [_generate_coalescing_key_sync(p) for p in payloads]
 
 
-def _calculate_analytics_sync(data: dict) -> dict:
-    """Calculate analytics for single data point"""
-    # Simulate CPU-intensive analytics
-    metrics = {
-        "count": 1,
-        "sum": data.get("value", 0),
-        "min": data.get("value", 0),
-        "max": data.get("value", 0),
-    }
+def _calculate_analytics_sync(data_list: list[dict]) -> dict:
+    """Calculate analytics for batch of data points"""
+    if not data_list:
+        return {
+            "throughput": 0.0,
+            "latency": 0.0,
+            "efficiency": 0.0,
+            "error_rate": 0.0,
+            "cache_hit_ratio": 0.0,
+        }
 
-    return metrics
+    # Extract metrics
+    throughputs = [d.get("throughput_rps", 0) for d in data_list]
+    latencies = [d.get("latency_ms", 0) for d in data_list]
+    total_requests = sum(d.get("total_requests", 0) for d in data_list)
+    coalesced = sum(d.get("coalesced_requests", 0) for d in data_list)
+    cache_hits = sum(d.get("cache_hits", 0) for d in data_list)
+    errors = sum(d.get("errors", 0) for d in data_list)
+
+    return {
+        "throughput": sum(throughputs) / len(throughputs) if throughputs else 0,
+        "latency": sum(latencies) / len(latencies) if latencies else 0,
+        "efficiency": (coalesced / total_requests * 100) if total_requests > 0 else 0,
+        "error_rate": (errors / total_requests * 100) if total_requests > 0 else 0,
+        "cache_hit_ratio": (cache_hits / total_requests * 100) if total_requests > 0 else 0,
+    }
 
 
 def _calculate_analytics_batch(data_list: list[dict]) -> dict[str, Any]:
-    """Calculate analytics for batch of data"""
-    if not data_list:
-        return {"count": 0, "sum": 0, "min": 0, "max": 0, "avg": 0}
-
-    values = [d.get("value", 0) for d in data_list]
-
-    return {
-        "count": len(values),
-        "sum": sum(values),
-        "min": min(values) if values else 0,
-        "max": max(values) if values else 0,
-        "avg": sum(values) / len(values) if values else 0,
-    }
+    """Calculate analytics for batch of data (alias for consistency)"""
+    return _calculate_analytics_sync(data_list)
 
 
 def _match_patterns_sync(text: str, patterns: list[str]) -> list[str]:
@@ -181,6 +268,17 @@ def _match_patterns_parallel(texts: list[str], patterns: list[str]) -> list[list
     return [_match_patterns_sync(text, patterns) for text in texts]
 
 
+def _match_patterns_detailed(texts: list[str], patterns: list[str]) -> list[dict]:
+    """Match patterns against texts and return detailed results"""
+    results = []
+
+    for text in texts:
+        matches = _match_patterns_sync(text, patterns)
+        results.append({"text_length": len(text), "patterns_tested": len(patterns), "matches": matches})
+
+    return results
+
+
 def _cleanup_cache_sync(key: str, expired_before: float) -> bool:
     """Check if cache key should be cleaned"""
     # Simulate cache cleanup logic
@@ -193,6 +291,30 @@ def _cleanup_cache_sync(key: str, expired_before: float) -> bool:
 def _cleanup_cache_keys(keys: list[str], expired_before: float) -> int:
     """Clean up batch of cache keys"""
     return sum(1 for key in keys if _cleanup_cache_sync(key, expired_before))
+
+
+def _cleanup_cache_entries(cache_entries: dict[str, dict]) -> list[str]:
+    """
+    Clean up cache entries and return expired keys
+
+    Args:
+        cache_entries: Dictionary of cache entries with metadata
+
+    Returns:
+        List of expired cache keys
+    """
+    current_time = time.time()
+    expired_keys = []
+
+    for key, entry in cache_entries.items():
+        # Check if entry is expired based on timestamp + TTL
+        timestamp = entry.get("timestamp", 0)
+        ttl = entry.get("ttl", 300)
+
+        if current_time > (timestamp + ttl):
+            expired_keys.append(key)
+
+    return expired_keys
 
 
 # Module-level processor instance

@@ -15,12 +15,15 @@ Features:
 
 import ipaddress
 import time
+from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from datetime import time as dt_time
 from enum import Enum
 from typing import Any
+
+from subzero.config.defaults import settings
 
 
 class AttributeType(str, Enum):
@@ -250,14 +253,16 @@ class ABACEngine:
             AttributeType.ENVIRONMENT: {},
         }
 
-        # Decision cache
-        self.decision_cache: dict[str, tuple[Effect, float]] = {}
+        # Decision cache with LRU eviction
+        self.decision_cache: OrderedDict[str, tuple[Effect, float]] = OrderedDict()
+        self.cache_capacity = settings.CACHE_CAPACITY  # Default: 10,000 entries
         self.cache_ttl = 60  # 1 minute
 
         # Metrics
         self.decisions_count = 0
         self.allow_count = 0
         self.deny_count = 0
+        self.cache_evictions = 0
 
         # Initialize default policies
         self._init_default_policies()
@@ -356,7 +361,12 @@ class ABACEngine:
         if cache_key in self.decision_cache:
             cached_effect, cached_at = self.decision_cache[cache_key]
             if time.time() - cached_at < self.cache_ttl:
+                # Move to end (mark as recently used for LRU)
+                self.decision_cache.move_to_end(cache_key)
                 return cached_effect, {"cached": True, "risk_score": risk_score}
+            else:
+                # TTL expired, remove from cache
+                del self.decision_cache[cache_key]
 
         # Evaluate policies in priority order
         sorted_policies = sorted(self.policies.values(), key=lambda p: p.priority, reverse=True)
@@ -385,8 +395,13 @@ class ABACEngine:
         else:
             self.deny_count += 1
 
-        # Cache decision
+        # Cache decision with LRU eviction
         self.decision_cache[cache_key] = (decision, time.time())
+
+        # Enforce cache capacity (LRU eviction)
+        if len(self.decision_cache) > self.cache_capacity:
+            self.decision_cache.popitem(last=False)
+            self.cache_evictions += 1
 
         latency_ms = (time.perf_counter() - start_time) * 1000
 
@@ -530,4 +545,6 @@ class ABACEngine:
             "deny_rate_percent": deny_rate,
             "policy_count": len(self.policies),
             "cache_size": len(self.decision_cache),
+            "cache_capacity": self.cache_capacity,
+            "cache_evictions": self.cache_evictions,
         }
