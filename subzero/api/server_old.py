@@ -298,9 +298,7 @@ async def health_check(gateway: Annotated[UnifiedZeroTrustGateway, Depends(get_g
     else:
         overall_status = "degraded"
 
-    return HealthResponse(
-        status=overall_status, version=__version__, uptime_seconds=uptime, components=components
-    )
+    return HealthResponse(status=overall_status, version=__version__, uptime_seconds=uptime, components=components)
 
 
 @app.post("/api/v1/authenticate", response_model=AuthenticationResponse, tags=["Authentication"])
@@ -414,9 +412,7 @@ async def retrieve_token(
             vault_reference=request.vault_reference, agent_id=request.agent_id, auto_refresh=request.auto_refresh
         )
 
-        return TokenRetrieveResponse(
-            token_data=token_data, agent_id=request.agent_id, retrieved_at=time.time()
-        )
+        return TokenRetrieveResponse(token_data=token_data, agent_id=request.agent_id, retrieved_at=time.time())
 
     except Exception as e:
         raise HTTPException(
@@ -506,7 +502,11 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTP exceptions"""
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": exc.detail, "error_code": f"HTTP_{exc.status_code}", "request_id": request.state.request_id if hasattr(request.state, "request_id") else None},
+        content={
+            "error": exc.detail,
+            "error_code": f"HTTP_{exc.status_code}",
+            "request_id": request.state.request_id if hasattr(request.state, "request_id") else None,
+        },
     )
 
 

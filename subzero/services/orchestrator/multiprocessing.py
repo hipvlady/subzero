@@ -273,7 +273,9 @@ class CPUBoundProcessor:
         operation_cost_ms = 0.2 * len(patterns)
 
         # Intelligent MP decision based on cost
-        if not self.pattern_pool or not self._should_use_multiprocessing(len(texts), operation_cost_ms=operation_cost_ms):
+        if not self.pattern_pool or not self._should_use_multiprocessing(
+            len(texts), operation_cost_ms=operation_cost_ms
+        ):
             # Sequential processing for small batches
             return [_match_patterns_sync(text, patterns) for text in texts]
 

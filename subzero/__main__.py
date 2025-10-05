@@ -59,9 +59,7 @@ Examples:
 
     parser.add_argument("--workers", type=int, default=1, help="Number of worker processes (default: 1)")
 
-    parser.add_argument(
-        "--reload", action="store_true", help="Enable auto-reload on code changes (development only)"
-    )
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload on code changes (development only)")
 
     parser.add_argument(
         "--access-log/--no-access-log",

@@ -67,7 +67,7 @@ async def verify_xaa_protocol():
             current_holder="agent_002",
             delegation_path=["agent_001", "agent_002"],
             depth=1,
-            max_depth=3
+            max_depth=3,
         )
         print_success(f"Delegation chain: depth {chain.depth}/{chain.max_depth}")
 
@@ -199,9 +199,7 @@ async def verify_token_vault():
 
         # Initialize vault
         vault = Auth0TokenVault(
-            auth0_domain="test.auth0.com",
-            management_api_token="test_token",
-            vault_namespace="test"
+            auth0_domain="test.auth0.com", management_api_token="test_token", vault_namespace="test"
         )
 
         # Verify methods
@@ -264,10 +262,7 @@ async def verify_mcp_protocol():
         assert len(complexities) == 4
 
         # Initialize discovery service
-        discovery = MCPDiscoveryService(
-            base_url="https://api.test.com",
-            service_name="Test Gateway"
-        )
+        discovery = MCPDiscoveryService(base_url="https://api.test.com", service_name="Test Gateway")
 
         # Verify OAuth metadata
         oauth_metadata = discovery.get_oauth_metadata()
@@ -297,13 +292,8 @@ async def verify_mcp_protocol():
             name="Test Workflow",
             description="Test multi-step workflow",
             steps=[
-                WorkflowStep(
-                    step_id="step1",
-                    capability_name="test_capability",
-                    input_mapping={},
-                    output_mapping={}
-                )
-            ]
+                WorkflowStep(step_id="step1", capability_name="test_capability", input_mapping={}, output_mapping={})
+            ],
         )
         print_success("Multi-step workflow support verified")
 
@@ -363,7 +353,7 @@ async def verify_threat_detection():
             threat_type=ThreatType.SIGNUP_FRAUD,
             confidence=0.95,
             severity=8,
-            evidence={"test": "data"}
+            evidence={"test": "data"},
         )
         assert signal.confidence >= 0.0 and signal.confidence <= 1.0
         assert signal.severity >= 1 and signal.severity <= 10

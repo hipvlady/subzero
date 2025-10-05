@@ -137,9 +137,7 @@ async def verify_auth0_actions():
         print_success("Imported Auth0ActionsManager successfully")
 
         # Initialize manager
-        actions_mgr = Auth0ActionsManager(
-            auth0_domain="test.auth0.com", management_api_token="test_token"
-        )
+        actions_mgr = Auth0ActionsManager(auth0_domain="test.auth0.com", management_api_token="test_token")
 
         # Verify trigger types
         triggers = list(ActionTrigger)
@@ -148,15 +146,9 @@ async def verify_auth0_actions():
 
         # Verify methods
         assert hasattr(actions_mgr, "post_login_action"), "post_login_action missing"
-        assert hasattr(
-            actions_mgr, "pre_user_registration_action"
-        ), "pre_user_registration_action missing"
-        assert hasattr(
-            actions_mgr, "post_user_registration_action"
-        ), "post_user_registration_action missing"
-        assert hasattr(
-            actions_mgr, "credentials_exchange_action"
-        ), "credentials_exchange_action missing"
+        assert hasattr(actions_mgr, "pre_user_registration_action"), "pre_user_registration_action missing"
+        assert hasattr(actions_mgr, "post_user_registration_action"), "post_user_registration_action missing"
+        assert hasattr(actions_mgr, "credentials_exchange_action"), "credentials_exchange_action missing"
 
         print_success("All action handlers verified")
 
@@ -235,9 +227,7 @@ async def verify_management_api():
         print_success("Imported ExtendedManagementAPI successfully")
 
         # Initialize API
-        mgmt_api = ExtendedManagementAPI(
-            auth0_domain="test.auth0.com", management_api_token="test_token"
-        )
+        mgmt_api = ExtendedManagementAPI(auth0_domain="test.auth0.com", management_api_token="test_token")
 
         # Verify user management methods
         assert hasattr(mgmt_api, "create_user"), "create_user missing"
@@ -262,12 +252,8 @@ async def verify_management_api():
         print_success("Organization management methods verified")
 
         # Verify attack protection
-        assert hasattr(
-            mgmt_api, "configure_brute_force_protection"
-        ), "configure_brute_force_protection missing"
-        assert hasattr(
-            mgmt_api, "configure_suspicious_ip_throttling"
-        ), "configure_suspicious_ip_throttling missing"
+        assert hasattr(mgmt_api, "configure_brute_force_protection"), "configure_brute_force_protection missing"
+        assert hasattr(mgmt_api, "configure_suspicious_ip_throttling"), "configure_suspicious_ip_throttling missing"
 
         print_success("Attack protection methods verified")
 

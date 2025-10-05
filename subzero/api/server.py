@@ -310,7 +310,9 @@ async def metrics(gw: Annotated[UnifiedZeroTrustGateway, Depends(get_gateway)]):
     rebac_stats = gw.rebac_engine.get_stats()
     abac_stats = gw.abac_engine.get_stats()
 
-    total_checks = rebac_stats["cache_hits"] + rebac_stats["cache_misses"] + abac_stats["cache_hits"] + abac_stats["cache_misses"]
+    total_checks = (
+        rebac_stats["cache_hits"] + rebac_stats["cache_misses"] + abac_stats["cache_hits"] + abac_stats["cache_misses"]
+    )
     total_hits = rebac_stats["cache_hits"] + abac_stats["cache_hits"]
     cache_hit_rate = total_hits / total_checks if total_checks > 0 else 0.0
 

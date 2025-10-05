@@ -30,9 +30,7 @@ class FeatureVerifier:
             features = {
                 "OAuth 2.1 Authorization Code Flow": hasattr(MCPOAuthProvider, "authorize_agent"),
                 "PKCE Support": hasattr(MCPOAuthProvider, "_generate_pkce_challenge"),
-                "Dynamic Client Registration (RFC 7591)": hasattr(
-                    MCPOAuthProvider, "register_dynamic_client"
-                ),
+                "Dynamic Client Registration (RFC 7591)": hasattr(MCPOAuthProvider, "register_dynamic_client"),
                 "Token Exchange (RFC 8693)": hasattr(MCPOAuthProvider, "exchange_token"),
                 "Token Introspection (RFC 7662)": hasattr(MCPOAuthProvider, "introspect_token"),
                 "DPoP Validation (RFC 9449)": hasattr(MCPOAuthProvider, "validate_dpop_proof"),
@@ -53,8 +51,7 @@ class FeatureVerifier:
             from subzero.services.security.llm_security import LLMSecurityGuard, LLMThreatType
 
             features = {
-                "LLM01: Prompt Injection Detection": "PROMPT_INJECTION"
-                in [t.value for t in LLMThreatType],
+                "LLM01: Prompt Injection Detection": "PROMPT_INJECTION" in [t.value for t in LLMThreatType],
                 "LLM02: Insecure Output Handling": "INSECURE_OUTPUT" in [t.value for t in LLMThreatType],
                 "LLM03: Data Poisoning": "DATA_POISONING" in [t.value for t in LLMThreatType],
                 "LLM04: DoS Protection": "DOS" in [t.value for t in LLMThreatType],
@@ -84,9 +81,7 @@ class FeatureVerifier:
 
             features = {
                 "Token Delegation": hasattr(XAAProtocol, "delegate_token"),
-                "Bidirectional Communication": hasattr(
-                    XAAProtocol, "establish_bidirectional_channel"
-                ),
+                "Bidirectional Communication": hasattr(XAAProtocol, "establish_bidirectional_channel"),
                 "Primary Token Type": "PRIMARY" in [t.value for t in XAATokenType],
                 "Delegated Token Type": "DELEGATED" in [t.value for t in XAATokenType],
                 "Impersonation Token Type": "IMPERSONATION" in [t.value for t in XAATokenType],
@@ -192,9 +187,7 @@ class FeatureVerifier:
             from subzero.services.authorization.abac import ABACEngine, AuthorizationContext
 
             abac = ABACEngine()
-            context = AuthorizationContext(
-                user_id="test", user_role="user", resource_id="doc", action="read"
-            )
+            context = AuthorizationContext(user_id="test", user_role="user", resource_id="doc", action="read")
 
             start = time.perf_counter()
             for _ in range(100):
