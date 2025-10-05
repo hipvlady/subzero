@@ -405,8 +405,8 @@ async def cleanup_after_test():
 
 def pytest_configure(config):
     """Configure pytest markers and multiprocessing settings."""
-    import sys
     import multiprocessing
+    import sys
 
     # Fix multiprocessing segfaults on Linux (CI environment)
     # This prevents fork() issues with pytest-xdist parallel execution
