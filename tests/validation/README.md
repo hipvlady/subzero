@@ -230,6 +230,55 @@ pytest tests/validation/test_verify_integration.py -v
 
 ---
 
+### Performance & Optimization Validation
+
+#### `test_load_performance.py`
+Load testing and RPS throughput validation.
+
+**Purpose:** Validates the gateway can handle high-throughput scenarios.
+
+**What it tests:**
+- 10,000+ RPS throughput targets
+- Concurrent request handling
+- System stability under load
+
+**Usage:**
+```bash
+pytest tests/validation/test_load_performance.py -v
+```
+
+#### `test_optimizations.py`
+Basic optimization verification.
+
+**Purpose:** Validates core performance optimizations are in place.
+
+**Usage:**
+```bash
+pytest tests/validation/test_optimizations.py -v
+```
+
+#### `test_advanced_optimizations.py`
+Advanced optimization features.
+
+**Purpose:** Validates advanced performance features and caching strategies.
+
+**Usage:**
+```bash
+pytest tests/validation/test_advanced_optimizations.py -v
+```
+
+#### `test_high_impact_optimizations.py`
+High-impact performance optimizations.
+
+**Purpose:** Validates critical performance optimizations (SIMD, caching, multiprocessing).
+
+**Usage:**
+```bash
+pytest tests/validation/test_high_impact_optimizations.py -v
+```
+
+---
+
 ## Running Validation Tests
 
 ### Run All Validation Tests
@@ -288,6 +337,12 @@ All validation tests should **PASS** for a production-ready release:
 | `test_verify_enterprise_features.py` | All 6 verifications pass, 90%+ implementation |
 | `test_verify_gaps_addressed.py` | All 7 verifications pass |
 | `test_verify_integration.py` | All components import successfully |
+| `test_load_performance.py` | 10,000+ RPS throughput achieved |
+| `test_optimizations.py` | Core optimizations verified |
+| `test_advanced_optimizations.py` | Advanced features verified |
+| `test_high_impact_optimizations.py` | Critical optimizations verified |
+
+**Total Tests:** 39 validation tests
 
 ---
 
@@ -385,11 +440,13 @@ if __name__ == "__main__":
 
 ## Related Documentation
 
-- [Testing Documentation](../../docs/testing.md)
-- [Integration Tests](../integration/README.md)
-- [Performance Tests](../performance/README.md)
-- [Scripts README](../../scripts/README.md)
+- [Performance Tests](../performance/README.md) - Performance benchmarks
+- [Scripts README](../../scripts/README.md) - Utility scripts
+- [Project README](../../README.md) - Main project documentation
+- [API Documentation](../../docs/api.md) - API endpoint reference
 
 ---
 
 **Last updated:** 2025-10-05
+**Test Count:** 39 validation tests
+**Status:** ✅ Active and maintained

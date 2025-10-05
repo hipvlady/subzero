@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 name = "subzero"
 dynamic = ["version"]
 description = "Zero Trust API Gateway with Enterprise-Grade Performance"
-readme = "readme.md"
+readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "Subzero Development Team", email = "dev@subzero.dev"}

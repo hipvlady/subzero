@@ -210,8 +210,4 @@ We currently do not have a bug bounty program, but we deeply appreciate security
 
 ---
 
-**Last updated**: 2025-09-30
-
----
-
 **Last updated:** 2025-10-02
