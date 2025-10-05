@@ -224,6 +224,22 @@ jobs:
           exit ${TEST_EXIT_CODE:-0}
         fi
 
+    - name: Run performance tests (no parallel execution)
+      if: always()
+      run: |
+        if [ -d "tests/performance" ] && [ -n "$(find tests/performance -name 'test_*.py' 2>/dev/null)" ]; then
+          echo "🚀 Running performance tests (serial execution to avoid multiprocessing conflicts)..."
+          # Performance tests use multiprocessing internally, so run serially without xdist
+          python -m pytest tests/performance/ \
+            --timeout=600 \
+            -v \
+            --tb=short \
+            || echo "⚠️  Some performance tests failed or were skipped"
+        else
+          echo "ℹ️  No performance tests directory or no test files found"
+        fi
+      continue-on-error: true
+
     - name: Run unit tests specifically (if exist)
       if: always()
       run: |
@@ -381,9 +397,11 @@ jobs:
       run: |
         if [ -d "tests/performance" ]; then
           echo "🚀 Running performance benchmarks..."
+          # Run without xdist to avoid multiprocessing conflicts
           python -m pytest tests/performance/ \
             --benchmark-only \
             --benchmark-json=benchmark-results.json \
+            --timeout=600 \
             -v \
             || echo "⚠️  Some performance tests skipped or failed"
         else

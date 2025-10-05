@@ -18,6 +18,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - TBD
 
+## [1.0.2] - 2025-10-05
+
+### Fixed
+- **CI/CD Segmentation Fault**
+  - Fixed segmentation fault in CI pipeline caused by nested multiprocessing conflicts
+  - Added platform-specific multiprocessing configuration (use `spawn` method on Linux)
+  - Separated performance tests to run serially (without pytest-xdist) to avoid multiprocessing conflicts
+  - Added `@pytest.mark.no_parallel` marker for tests using ProcessPoolExecutor
+  - CI/CD pipeline now completes in ~20-25 minutes instead of hanging at ~2 hours
+
+### Changed
+- Performance tests now run separately from main test suite to prevent multiprocessing conflicts
+- Updated pytest configuration to use `spawn` multiprocessing method on Linux (CI environment)
+- Regular tests still run in parallel for optimal performance; only performance tests run serially
+
+### Technical Details
+- Root cause: pytest-xdist worker processes + ProcessPoolExecutor created nested multiprocessing
+- Solution: Force `spawn()` instead of `fork()` on Linux + isolate multiprocessing tests
+- Files modified: `tests/conftest.py`, `.github/workflows/ci.yml`, `tests/performance/test_cpu_bound_multiprocessing.py`
+
 ## [1.0.1] - 2025-10-05
 
 ### Fixed

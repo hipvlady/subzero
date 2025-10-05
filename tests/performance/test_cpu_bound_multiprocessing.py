@@ -457,6 +457,7 @@ async def test_cache_cleanup_benchmark():
 
 
 @pytest.mark.asyncio
+@pytest.mark.no_parallel
 async def test_gil_contention_demonstration():
     """Demonstrate GIL contention in CPU-bound vs I/O-bound operations"""
 

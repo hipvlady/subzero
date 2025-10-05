@@ -404,12 +404,25 @@ async def cleanup_after_test():
 
 
 def pytest_configure(config):
-    """Configure pytest markers."""
+    """Configure pytest markers and multiprocessing settings."""
+    import sys
+    import multiprocessing
+
+    # Fix multiprocessing segfaults on Linux (CI environment)
+    # This prevents fork() issues with pytest-xdist parallel execution
+    if sys.platform == "linux":
+        try:
+            multiprocessing.set_start_method("spawn", force=True)
+        except RuntimeError:
+            # Method already set, skip
+            pass
+
     config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
     config.addinivalue_line("markers", "performance: marks tests as performance tests")
     config.addinivalue_line("markers", "security: marks tests as security tests")
+    config.addinivalue_line("markers", "no_parallel: marks tests that cannot run in parallel with xdist")
 
 
 # ========================================
