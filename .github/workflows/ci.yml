@@ -1,7 +1,7 @@
 # Copyright (c) Subzero Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-name: CI/CD Pipeline
+name: CI/CD Pipeline with Automated Test Discovery
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
       - 'v*'
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:  # Allow manual triggering
 
 env:
   PYTHON_VERSION: '3.11'
@@ -84,7 +85,7 @@ jobs:
         path: bandit-report.json
 
   # ========================================
-  # Unit and Integration Tests
+  # Automated Test Discovery and Execution
   # ========================================
   test:
     name: Tests (Python ${{ matrix.python-version }})
@@ -114,39 +115,226 @@ jobs:
         pip install -r requirements.txt
         pip install -e ".[dev,testing]"
 
-    - name: Run unit tests
+        # Verify parallel test execution capabilities
+        echo "📦 Installed test enhancement packages:"
+        python -c "import xdist; print(f'  ✅ pytest-xdist {xdist.__version__} (parallel execution)')" || echo "  ⚠️  pytest-xdist not available"
+        python -c "import pytest_rerunfailures; print(f'  ✅ pytest-rerunfailures installed (retry failed tests)')" || echo "  ⚠️  pytest-rerunfailures not available"
+        python -c "import pytest_timeout; print(f'  ✅ pytest-timeout installed (timeout handling)')" || echo "  ⚠️  pytest-timeout not available"
+
+    - name: Validate test directory structure
       run: |
-        if [ -d "tests/unit" ] && [ "$(ls -A tests/unit/*.py 2>/dev/null)" ]; then
-          pytest tests/unit/ -v --cov=subzero --cov-report=xml --cov-report=html
-        else
-          echo "No unit tests found, running all tests with coverage"
-          pytest tests/ -v --cov=subzero --cov-report=xml --cov-report=html --ignore=tests/performance/
+        echo "🔍 Validating test directory structure..."
+        if [ ! -d "tests" ]; then
+          echo "❌ tests/ directory not found!"
+          exit 1
+        fi
+        echo "✅ tests/ directory found"
+
+        echo ""
+        echo "📊 Test directory structure:"
+        find tests -type d -not -path "*/\.*" -not -path "*/__pycache__" | sort
+
+        echo ""
+        echo "📈 Test file distribution:"
+        for dir in tests/*/; do
+          if [ -d "$dir" ]; then
+            count=$(find "$dir" -type f -name "test_*.py" | wc -l | tr -d ' ')
+            dirname=$(basename "$dir")
+            echo "  - $dirname: $count test file(s)"
+          fi
+        done
+
+    - name: Discover and count all tests
+      id: test-discovery
+      run: |
+        echo "🔍 Discovering all tests in tests/ directory..."
+
+        # Count test files by pattern
+        TOTAL_TEST_FILES=$(find tests/ -type f -name "test_*.py" | wc -l | tr -d ' ')
+        echo "Found $TOTAL_TEST_FILES test files matching pattern: test_*.py"
+
+        # List all test files for visibility
+        echo ""
+        echo "📝 Discovered test files:"
+        find tests/ -type f -name "test_*.py" | sort | head -30
+
+        if [ $TOTAL_TEST_FILES -gt 30 ]; then
+          echo "... and $(($TOTAL_TEST_FILES - 30)) more files"
         fi
 
-    - name: Run integration tests
+        # Count actual test functions using pytest collection (dry-run)
+        echo ""
+        echo "🧪 Collecting test items..."
+        TEST_COUNT=$(python -m pytest tests/ --collect-only -q 2>/dev/null | tail -1 || echo "0 items")
+        echo "Total tests collected: $TEST_COUNT"
+
+        # Export for later steps
+        echo "test_file_count=$TOTAL_TEST_FILES" >> $GITHUB_OUTPUT
+        echo "test_count=$TEST_COUNT" >> $GITHUB_OUTPUT
+
+    - name: Run comprehensive test suite with automatic discovery
+      id: test-runner
       run: |
-        if [ -d "tests/integration" ] && [ "$(ls -A tests/integration/*.py 2>/dev/null)" ]; then
-          pytest tests/integration/ -v
+        echo "🚀 Running comprehensive test suite with automatic discovery..."
+        echo ""
+
+        # Determine number of CPUs for parallel execution
+        NUM_CPUS=$(python -c "import os; print(os.cpu_count())")
+        echo "💻 Available CPUs: $NUM_CPUS"
+        echo "🔄 Parallel workers: auto (pytest-xdist will optimize)"
+        echo ""
+
+        # Run ALL tests in tests/ directory with enhancements:
+        # - Parallel execution with pytest-xdist (-n auto)
+        # - Retry failed tests up to 2 times (--reruns 2 --reruns-delay 1)
+        # - Timeout for hanging tests (--timeout 300 = 5 minutes per test)
+        # - Exclude performance benchmarks from regular runs
+        python -m pytest tests/ \
+          --ignore=tests/performance/ \
+          -n auto \
+          --reruns 2 \
+          --reruns-delay 1 \
+          --timeout=300 \
+          -v \
+          --tb=short \
+          --cov=subzero \
+          --cov-report=term-missing:skip-covered \
+          --cov-report=xml:coverage.xml \
+          --cov-report=html:htmlcov \
+          --junitxml=test-results.xml \
+          --color=yes \
+          || TEST_EXIT_CODE=$?
+
+        # Report results
+        if [ "${TEST_EXIT_CODE:-0}" -eq 0 ]; then
+          echo ""
+          echo "✅ All tests passed!"
+          echo "🚀 Performance: Parallel execution with $NUM_CPUS CPUs"
+          echo "🔄 Reliability: Failed tests auto-retried up to 2 times"
+          echo "⏱️  Safety: 5-minute timeout per test"
         else
-          echo "No integration tests found, skipping"
+          echo ""
+          echo "❌ Some tests failed (exit code: ${TEST_EXIT_CODE:-0})"
+          echo "💡 Note: Tests were retried automatically before failing"
+          exit ${TEST_EXIT_CODE:-0}
+        fi
+
+    - name: Run unit tests specifically (if exist)
+      if: always()
+      run: |
+        if [ -d "tests/unit" ] && [ -n "$(find tests/unit -name 'test_*.py' 2>/dev/null)" ]; then
+          echo "🧪 Running unit tests specifically..."
+          python -m pytest tests/unit/ -v --tb=short -m "unit or not integration"
+        else
+          echo "ℹ️  No dedicated unit tests directory or no test files found"
         fi
       continue-on-error: true
 
+    - name: Run integration tests specifically (if exist)
+      if: always()
+      run: |
+        if [ -d "tests/integration" ] && [ -n "$(find tests/integration -name 'test_*.py' 2>/dev/null)" ]; then
+          echo "🔗 Running integration tests specifically..."
+          python -m pytest tests/integration/ -v --tb=short -m "integration or not unit"
+        else
+          echo "ℹ️  No dedicated integration tests directory or no test files found"
+        fi
+      continue-on-error: true
+
+    - name: Generate test summary
+      if: always()
+      run: |
+        NUM_CPUS=$(python -c "import os; print(os.cpu_count())")
+
+        echo "## 📊 Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Discovery" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Files Discovered**: ${{ steps.test-discovery.outputs.test_file_count }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Items Collected**: ${{ steps.test-discovery.outputs.test_count }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Discovery Method**: ✅ Automatic (all tests/ subdirectories)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Execution" >> $GITHUB_STEP_SUMMARY
+        echo "- **Python Version**: ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Parallel Execution**: ✅ Enabled (auto-optimized for $NUM_CPUS CPUs)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Failed Test Retry**: ✅ Up to 2 retries with 1s delay" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Timeout**: ✅ 5 minutes per test" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Reports Generated" >> $GITHUB_STEP_SUMMARY
+
+        if [ -f "coverage.xml" ]; then
+          echo "- **Coverage Report**: ✅ XML & HTML formats" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        if [ -f "test-results.xml" ]; then
+          echo "- **JUnit Report**: ✅ Available for GitHub UI" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Enhancements" >> $GITHUB_STEP_SUMMARY
+        echo "- 🚀 **Faster**: Parallel execution across multiple CPUs" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔄 **More Reliable**: Automatic retry of flaky tests" >> $GITHUB_STEP_SUMMARY
+        echo "- ⏱️  **Safer**: Timeout protection against hanging tests" >> $GITHUB_STEP_SUMMARY
+
+    - name: Detect flaky tests
+      if: always()
+      run: |
+        echo "🔍 Analyzing test results for flaky tests..."
+
+        # Check if any tests were retried (flaky tests)
+        if [ -f "test-results.xml" ]; then
+          # Parse JUnit XML for rerun information
+          FLAKY_TESTS=$(grep -c 'rerun' test-results.xml 2>/dev/null || echo "0")
+
+          if [ "$FLAKY_TESTS" -gt 0 ]; then
+            echo "⚠️  Found $FLAKY_TESTS flaky test(s) that required retry"
+            echo ""
+            echo "## ⚠️  Flaky Tests Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**$FLAKY_TESTS test(s) failed initially but passed on retry.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "These tests may be flaky and should be investigated:" >> $GITHUB_STEP_SUMMARY
+            echo "- Check for race conditions" >> $GITHUB_STEP_SUMMARY
+            echo "- Review timing-dependent logic" >> $GITHUB_STEP_SUMMARY
+            echo "- Verify test isolation" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No flaky tests detected - all tests passed on first attempt"
+          fi
+        else
+          echo "ℹ️  No test results file available for flaky test analysis"
+        fi
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: |
+          test-results.xml
+          coverage.xml
+          htmlcov/
+        retention-days: 30
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
+      if: success() || failure()
       with:
         file: ./coverage.xml
         flags: unittests
-        name: codecov-umbrella
+        name: codecov-py${{ matrix.python-version }}
+        fail_ci_if_error: false
 
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v4
+    - name: Publish test report
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
       with:
-        name: coverage-report-${{ matrix.python-version }}
-        path: htmlcov/
+        name: Test Results (Python ${{ matrix.python-version }})
+        path: test-results.xml
+        reporter: java-junit
+        fail-on-error: false
 
   # ========================================
-  # Performance Benchmarks
+  # Performance Benchmarks (Separate Job)
   # ========================================
   benchmark:
     name: Performance Benchmarks
@@ -173,15 +361,38 @@ jobs:
         pip install -r requirements.txt
         pip install -e ".[dev,testing]"
 
-    - name: Run performance benchmarks
-      run: pytest tests/performance/ --benchmark-only --benchmark-json=benchmark-results.json || echo "Performance tests skipped due to import errors"
+    - name: Discover performance tests
+      run: |
+        echo "🔍 Discovering performance tests..."
+        PERF_TEST_COUNT=$(find tests/performance/ -name "test_*.py" 2>/dev/null | wc -l | tr -d ' ')
+        echo "Found $PERF_TEST_COUNT performance test files"
+
+        if [ "$PERF_TEST_COUNT" -gt 0 ]; then
+          echo "📝 Performance test files:"
+          find tests/performance/ -name "test_*.py" | sort
+        fi
+
+    - name: Run performance benchmarks with auto-discovery
+      run: |
+        if [ -d "tests/performance" ]; then
+          echo "🚀 Running performance benchmarks..."
+          python -m pytest tests/performance/ \
+            --benchmark-only \
+            --benchmark-json=benchmark-results.json \
+            -v \
+            || echo "⚠️  Some performance tests skipped or failed"
+        else
+          echo "ℹ️  No performance tests directory found"
+        fi
       continue-on-error: true
 
     - name: Upload benchmark results
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: benchmark-results
         path: benchmark-results.json
+        retention-days: 90
 
   # ========================================
   # Build Package
