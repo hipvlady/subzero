@@ -83,7 +83,8 @@ class TestRPSThroughput:
 
             # Validate claim - CI-aware threshold
             import os
-            min_rps = 5_000 if os.getenv('CI') else 9_000
+
+            min_rps = 5_000 if os.getenv("CI") else 9_000
             assert rps >= min_rps, f"RPS {rps:,.0f} below minimum {min_rps:,} (target: 10K, CI: 5K)"
 
             # Store result for documentation
