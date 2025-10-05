@@ -213,8 +213,8 @@ __marimo__/
 .claude/
 CLAUDE.md
 
-# Archive folder - development artifacts and reports
-archive/
+# Archive folder - keeping organized archived scripts for reference
+# archive/ - commented out to allow archive directory in repo
 
 # Hackathon folder - competition materials and presentations
 # hackathon/
