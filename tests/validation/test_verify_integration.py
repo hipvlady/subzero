@@ -14,9 +14,9 @@ BLUE = "\033[94m"
 RESET = "\033[0m"
 
 
-def test_import(module_path: str, component_name: str) -> tuple[bool, str]:
+def _test_import(module_path: str, component_name: str) -> tuple[bool, str]:
     """
-    Test if a module can be imported
+    Test if a module can be imported (internal utility function)
 
     Args:
         module_path: Python module path
@@ -80,7 +80,7 @@ def main():
     print(f"{YELLOW}Testing {len(components)} components...{RESET}\n")
 
     for module_path, component_name in components:
-        success, error = test_import(module_path, component_name)
+        success, error = _test_import(module_path, component_name)
 
         if success:
             print(f"  {GREEN}✓{RESET} {component_name:<50} {GREEN}OK{RESET}")
@@ -190,6 +190,12 @@ def main():
         print(f"{GREEN}   All components are seamlessly integrated!{RESET}\n")
 
         return 0
+
+
+def test_integration_verification():
+    """Pytest test that runs the integration verification"""
+    result = main()
+    assert result == 0, "Integration verification failed"
 
 
 if __name__ == "__main__":

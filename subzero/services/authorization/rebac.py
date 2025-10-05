@@ -849,6 +849,19 @@ class ReBACEngine:
                     if await self._check_relation(object_type, object_id, relation, member_type, member_id):
                         return True
 
+        # Check team/group membership (if subject is a user, check if they're in a team that has access)
+        if subject_type == "user":
+            # Find all teams/groups that have the relation to the object
+            object_key = f"{object_type}:{object_id}"
+            for tuple_obj in self.by_object[object_key]:
+                if tuple_obj.relation == relation and tuple_obj.subject_type in ["team", "group"]:
+                    # Check if user is member of this team
+                    team_type = tuple_obj.subject_type
+                    team_id = tuple_obj.subject_id
+                    team_tuple = AuthzTuple(team_type, team_id, "member", subject_type, subject_id)
+                    if team_tuple in self.tuples:
+                        return True
+
         return False
 
     async def expand(self, object_type: str, object_id: str, relation: str) -> list[AuthzTuple]:

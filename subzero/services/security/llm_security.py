@@ -226,8 +226,9 @@ class LLMSecurityGuard:
             r"act\s+as\s+(a|an)\s+\w+",
             r"pretend\s+to\s+be",
             # System prompt extraction
-            r"(show|display|reveal|print)\s+(your|the)\s+(system\s+)?(prompt|instructions)",
+            r"(show|display|reveal|print)\s+(your|the|me)\s+.{0,20}(system\s+)?(prompt|instructions)",
             r"what\s+(are|is)\s+your\s+(original|initial)\s+(instructions|prompt)",
+            r"(show|reveal)\s+.*\s+(original|initial|system)\s+(instructions|prompt)",
             # Delimiter attacks
             r"<\|endoftext\|>",
             r"<\|im_start\|>",
@@ -247,9 +248,11 @@ class LLMSecurityGuard:
             "ssn": r"\b\d{3}-\d{2}-\d{4}\b",
             "credit_card": r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",
             "phone": r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b",
-            "api_key": r"(api[_-]?key|apikey)[\s:=]+['\"]?([a-zA-Z0-9_-]{20,})['\"]?",
+            "api_key": r"sk_(live|test)_[a-zA-Z0-9]{24,}",  # Stripe/OpenAI style
+            "generic_key": r"(api[_-]?key|apikey)[\s:=]+['\"]?([a-zA-Z0-9_-]{20,})['\"]?",
             "jwt": r"eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+",
             "aws_key": r"AKIA[0-9A-Z]{16}",
+            "github_token": r"gh[ps]_[a-zA-Z0-9]{36}",
             "private_key": r"-----BEGIN (RSA |EC )?PRIVATE KEY-----",
         }
 
@@ -349,7 +352,7 @@ class LLMSecurityGuard:
                     risk_score += 0.25
 
         # Audit high-risk inputs
-        if risk_score >= 0.5:
+        if risk_score >= 0.5 or len(violations) > 0:
             self.metrics["prompt_injections_blocked"] += 1
             self._audit_threat(
                 agent_id=agent_id,
@@ -357,7 +360,8 @@ class LLMSecurityGuard:
                 details={"violations": len(violations), "risk_score": risk_score},
             )
 
-        is_safe = risk_score < 0.5
+        # Input is unsafe if there are ANY violations, regardless of risk score
+        is_safe = len(violations) == 0
 
         return InputSanitizationResult(
             is_safe=is_safe, sanitized_input=sanitized, violations=violations, risk_score=risk_score
@@ -473,7 +477,8 @@ class LLMSecurityGuard:
                 )
                 risk_score += 0.2
 
-        is_safe = risk_score < 0.5
+        # Output is unsafe if there are ANY violations, regardless of risk score
+        is_safe = len(violations) == 0
 
         return OutputValidationResult(
             is_safe=is_safe, sanitized_output=sanitized, violations=violations, risk_score=risk_score
