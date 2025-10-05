@@ -37,6 +37,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Skipped `test_orchestrator_performance.py` in CI (async timeout/deadlock issue - needs investigation)
   - Performance tests now pass reliably in CI while maintaining strict local standards
 
+- **Performance Test API Mismatches (11 test failures)**
+  - **ROOT CAUSE**: Performance tests written against outdated API signatures
+  - Fixed `SIMDHasher`: Changed from non-existent `add_to_batch()`/`compute_batch()` to `hash_strings_batch()`
+  - Fixed `benchmark_hash_functions()`: Updated to use correct return dict structure (`{algo: {time_ms, throughput, per_hash_us}}`)
+  - Fixed `simd_xxhash64()`: Changed input from `np.ndarray` to `bytes` to match actual signature
+  - Fixed `TokenPool`: Changed from non-existent `pool_size` parameter to `max_size`
+  - Fixed `TokenPool`: Changed from `get_token()` to `get_pooled_token()` for synchronous access
+  - Fixed `AdaptiveTokenPool`: Removed non-existent `key_manager` parameter
+  - Fixed `CuckooCache`: Changed from non-existent `get_stats()` to `get_load_factor()` and `len()`
+  - Fixed `HighPerformanceAuthenticator`: Corrected `get_token()` call to `get_pooled_token()`
+  - Fixed multiprocessing pickle error: Moved local test functions to module level
+  - Added macOS-specific multiprocessing speedup skip (spawn overhead higher than fork)
+  - Fixed `TokenPool.get_stats()`: Added `hasattr` check for optional `precomputed_pool` attribute
+  - All 17 auth performance tests now pass
+
 ### Changed
 - **TEMPORARY**: Disabled parallel test execution (`-n auto` removed from pytest command)
 - Skipped 2 tests that use SharedMemoryCache (incompatible with test environment)

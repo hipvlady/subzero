@@ -277,14 +277,19 @@ class TokenPool:
         total_requests = self.stats["hits"] + self.stats["misses"]
         hit_rate = self.stats["hits"] / total_requests if total_requests > 0 else 0.0
 
-        return {
+        result = {
             **self.stats,
             "total_requests": total_requests,
             "hit_rate": hit_rate,
             "pool_count": len(self.pools),
             "total_tokens": sum(len(pool) for pool in self.pools.values()),
-            "precomputed_tokens": len(self.precomputed_pool),
         }
+
+        # Include precomputed tokens if available
+        if hasattr(self, "precomputed_pool"):
+            result["precomputed_tokens"] = len(self.precomputed_pool)
+
+        return result
 
 
 class AdaptiveTokenPool(TokenPool):

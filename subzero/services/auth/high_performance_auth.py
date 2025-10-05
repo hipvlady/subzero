@@ -118,7 +118,7 @@ class HighPerformanceAuthenticator:
             )
 
         # Try token pool
-        pooled_token = self.token_pool.get_token(user_id, scopes)
+        pooled_token = self.token_pool.get_pooled_token(user_id, scopes)
         if pooled_token:
             self.stats["pool_hits"] += 1
             latency_ms = (time.perf_counter() - start_time) * 1000

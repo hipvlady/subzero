@@ -34,7 +34,7 @@ pytestmark = pytest.mark.skipif(
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from subzero.services.orchestrator.event_loop import (
+from subzero.services.orchestrator.event_loop import (  # noqa: E402
     FunctionalEventOrchestrator,
     RequestPriority,
 )
