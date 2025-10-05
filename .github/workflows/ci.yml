@@ -179,6 +179,9 @@ jobs:
 
     - name: Run comprehensive test suite with automatic discovery
       id: test-runner
+      env:
+        # Fix multiprocessing segfaults by forcing spawn method
+        PYTEST_XDIST_WORKER_COUNT: "0"
       run: |
         echo "🚀 Running comprehensive test suite with automatic discovery..."
         echo ""
@@ -186,17 +189,14 @@ jobs:
         # Determine number of CPUs for parallel execution
         NUM_CPUS=$(python -c "import os; print(os.cpu_count())")
         echo "💻 Available CPUs: $NUM_CPUS"
-        echo "🔄 Parallel workers: auto (pytest-xdist will optimize)"
+        echo "⚠️  Running in SERIAL mode due to multiprocessing segfault"
         echo ""
 
-        # Run ALL tests in tests/ directory with enhancements:
-        # - Parallel execution with pytest-xdist (-n auto)
-        # - Retry failed tests up to 2 times (--reruns 2 --reruns-delay 1)
-        # - Timeout for hanging tests (--timeout 300 = 5 minutes per test)
-        # - Exclude performance benchmarks from regular runs
+        # TEMPORARY FIX: Run without -n auto to avoid segfault
+        # The multiprocessing code conflicts with pytest-xdist
+        # TODO: Re-enable parallel execution after fixing multiprocessing issues
         python -m pytest tests/ \
           --ignore=tests/performance/ \
-          -n auto \
           --reruns 2 \
           --reruns-delay 1 \
           --timeout=300 \
@@ -214,7 +214,7 @@ jobs:
         if [ "${TEST_EXIT_CODE:-0}" -eq 0 ]; then
           echo ""
           echo "✅ All tests passed!"
-          echo "🚀 Performance: Parallel execution with $NUM_CPUS CPUs"
+          echo "⚙️  Mode: Serial execution (parallel disabled due to segfault)"
           echo "🔄 Reliability: Failed tests auto-retried up to 2 times"
           echo "⏱️  Safety: 5-minute timeout per test"
         else

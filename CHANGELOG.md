@@ -21,21 +21,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.2] - 2025-10-05
 
 ### Fixed
-- **CI/CD Segmentation Fault**
-  - Fixed segmentation fault in CI pipeline caused by nested multiprocessing conflicts
-  - Added platform-specific multiprocessing configuration (use `spawn` method on Linux)
-  - Separated performance tests to run serially (without pytest-xdist) to avoid multiprocessing conflicts
-  - Added `@pytest.mark.no_parallel` marker for tests using ProcessPoolExecutor
-  - CI/CD pipeline now completes in ~20-25 minutes instead of hanging at ~2 hours
+- **CI/CD Segmentation Fault (Workaround)**
+  - **CRITICAL**: Disabled pytest-xdist parallel execution to prevent segmentation faults
+  - Root cause: Nested multiprocessing (pytest-xdist + ProcessPoolExecutor) causes segfaults on Linux
+  - All tests now run serially to ensure pipeline stability
+  - CI/CD pipeline completes successfully (~30-40 minutes vs hanging at ~2 hours)
 
 ### Changed
-- Performance tests now run separately from main test suite to prevent multiprocessing conflicts
-- Updated pytest configuration to use `spawn` multiprocessing method on Linux (CI environment)
-- Regular tests still run in parallel for optimal performance; only performance tests run serially
+- **TEMPORARY**: Disabled parallel test execution (`-n auto` removed from pytest command)
+- Performance tests run separately from main test suite
+- Added multiprocessing configuration in `tests/conftest.py` (not sufficient alone)
+- Added `@pytest.mark.no_parallel` marker for multiprocessing tests
+
+### Known Issues
+- Tests run serially, increasing CI time from ~15 min to ~30-40 min
+- Need to investigate root cause of multiprocessing conflicts
+- Future fix should re-enable parallel execution after resolving conflicts
 
 ### Technical Details
-- Root cause: pytest-xdist worker processes + ProcessPoolExecutor created nested multiprocessing
-- Solution: Force `spawn()` instead of `fork()` on Linux + isolate multiprocessing tests
+- Root cause: pytest-xdist worker processes + ProcessPoolExecutor create nested multiprocessing
+- Attempted fix: `multiprocessing.set_start_method("spawn")` in pytest_configure (insufficient)
+- Working solution: Disable pytest-xdist entirely until multiprocessing conflicts resolved
 - Files modified: `tests/conftest.py`, `.github/workflows/ci.yml`, `tests/performance/test_cpu_bound_multiprocessing.py`
 
 ## [1.0.1] - 2025-10-05
