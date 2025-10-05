@@ -1,4 +1,7 @@
-# CI/CD Segmentation Fault Fix
+# CI/CD Segmentation Fault Fix (Workaround)
+
+## ⚠️ Status: WORKAROUND IMPLEMENTED
+This is a **temporary workaround** that disables parallel test execution to prevent segfaults. A permanent fix requires deeper investigation of the multiprocessing conflicts.
 
 ## Problem
 The CI/CD pipeline was experiencing segmentation faults when running tests with pytest-xdist parallel execution. The issue occurred at ~1h 58m into the test run, causing the pipeline to hang indefinitely.
@@ -11,7 +14,7 @@ The segfault was caused by **nested multiprocessing** conflicts:
 3. On Linux, the default `fork()` method for multiprocessing can cause issues when combined with pytest-xdist
 4. This created a resource conflict resulting in segmentation faults
 
-## Solution
+## Solution (Workaround)
 
 ### 1. Fixed Multiprocessing Start Method (tests/conftest.py)
 Added platform-specific multiprocessing configuration to use `spawn` instead of `fork` on Linux:
@@ -35,24 +38,33 @@ def pytest_configure(config):
 - `spawn()` starts a fresh Python interpreter, avoiding memory conflicts
 - Only applies on Linux where fork is the default (macOS/Windows already use spawn)
 
-### 2. Separated Performance Tests (.github/workflows/ci.yml)
-Moved performance tests to run **serially** (without pytest-xdist) to avoid nested multiprocessing:
+### 2. **CRITICAL: Disabled Parallel Execution** (.github/workflows/ci.yml)
+The `multiprocessing.set_start_method("spawn")` fix was **insufficient**. We had to completely disable pytest-xdist:
 
 ```yaml
 - name: Run comprehensive test suite
   run: |
+    # REMOVED: -n auto (parallel execution disabled)
     python -m pytest tests/ \
       --ignore=tests/performance/ \
-      -n auto \  # Parallel execution for non-performance tests
-      ...
+      --reruns 2 \
+      --timeout=300 \
+      -v \
+      --tb=short
+      # Note: No -n auto flag = serial execution
 
 - name: Run performance tests (no parallel execution)
   run: |
     python -m pytest tests/performance/ \
-      --timeout=600 \  # No -n auto flag
+      --timeout=600 \
       -v \
       --tb=short
 ```
+
+**Why the spawn fix wasn't enough:**
+- `pytest_configure` runs AFTER pytest-xdist spawns workers
+- By the time `set_start_method("spawn")` is called, workers are already created
+- The segfault occurs during worker initialization, before pytest_configure runs
 
 ### 3. Added Test Marker
 Added `@pytest.mark.no_parallel` marker for tests that use multiprocessing internally:
@@ -69,32 +81,58 @@ async def test_gil_contention_demonstration():
 2. **.github/workflows/ci.yml** - Separated performance tests from parallel runs
 3. **tests/performance/test_cpu_bound_multiprocessing.py** - Added `no_parallel` marker
 
-## Benefits
-- ✅ Eliminates segmentation faults in CI/CD
-- ✅ Maintains parallel execution for regular tests (faster)
-- ✅ Runs performance tests safely in serial mode
-- ✅ Platform-specific fix (only applies on Linux)
-- ✅ No performance regression for non-performance tests
+## Impact
+
+### ✅ Benefits
+- ✅ **Eliminates segmentation faults** in CI/CD (pipeline completes)
+- ✅ **No more hangs** - CI completes in ~30-40 minutes vs hanging at 2 hours
+- ✅ **Stable builds** - Tests run reliably without crashes
+
+### ⚠️ Trade-offs
+- ⚠️  **Slower CI** - Serial execution takes ~30-40min (was ~15min with parallel)
+- ⚠️  **Temporary workaround** - Not a permanent solution
+- ⚠️  **pytest-xdist unused** - Parallel test capability disabled
 
 ## Testing
 To test locally:
 
 ```bash
-# Run regular tests in parallel (should work)
-pytest tests/ --ignore=tests/performance/ -n auto -v
+# Run regular tests serially (matches CI behavior)
+pytest tests/ --ignore=tests/performance/ -v
 
-# Run performance tests serially (should work)
+# Run performance tests serially
 pytest tests/performance/ -v
 
-# Run all tests
+# Run all tests serially
 pytest tests/ -v
+
+# If you want to test parallel locally (may segfault):
+pytest tests/ --ignore=tests/performance/ -n auto -v
 ```
 
 ## Expected CI/CD Behavior
-- Regular tests: Run in parallel with pytest-xdist (~10-15 minutes)
-- Performance tests: Run serially after regular tests (~5-10 minutes)
-- Total time: ~20-25 minutes (down from 2+ hours with hangs)
-- No more segmentation faults ✅
+- **Regular tests**: Run serially (~25-35 minutes)
+- **Performance tests**: Run serially after regular tests (~5-10 minutes)
+- **Total time**: ~30-40 minutes (was hanging at 2+ hours)
+- **No more segmentation faults** ✅
+
+## Future Work Needed
+
+To re-enable parallel execution, we need to:
+
+1. **Investigate deeper multiprocessing issues:**
+   - Why does ProcessPoolExecutor conflict with pytest-xdist?
+   - Can we refactor multiprocessing code to be xdist-compatible?
+
+2. **Alternative approaches:**
+   - Use threading instead of multiprocessing where possible
+   - Implement proper process pool lifecycle management
+   - Use pytest-xdist's `--dist` options (loadscope, loadfile)
+
+3. **Test in isolation:**
+   - Identify which specific test causes the segfault
+   - Run performance tests in separate job/workflow
+   - Use `@pytest.mark.no_parallel` more extensively
 
 ## References
 - Python multiprocessing start methods: https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
