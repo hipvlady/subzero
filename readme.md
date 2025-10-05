@@ -368,11 +368,46 @@ source venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+### Project Structure
+
+```
+subzero/
+├── subzero/              # Main package source code
+│   ├── api/              # FastAPI endpoints and server
+│   ├── services/         # Core services (auth, authz, security, MCP)
+│   ├── config/           # Configuration management
+│   └── utils/            # Utility functions
+├── tests/                # Test suite
+│   ├── unit/             # Unit tests for components
+│   ├── integration/      # Integration tests
+│   ├── performance/      # Performance benchmarks
+│   ├── security/         # Security validation
+│   └── validation/       # Feature verification tests
+├── scripts/              # Production utility scripts
+├── archive/              # Archived development files
+├── docs/                 # Documentation
+├── etc/                  # Configuration files (Docker, K8s)
+└── pyproject.toml        # Project dependencies and metadata
+```
+
+See [scripts/README.md](scripts/README.md) for script documentation and [archive/ARCHIVE_INDEX.md](archive/ARCHIVE_INDEX.md) for archived files.
+
 ### Running Tests
 
 ```bash
+# Run all tests
 pytest
+
+# Run with coverage
 pytest --cov=subzero --cov-report=html
+
+# Run specific test categories
+pytest tests/unit/ -v          # Unit tests
+pytest tests/integration/ -v   # Integration tests
+pytest tests/validation/ -v    # Feature validation
+
+# Run performance benchmarks
+pytest tests/performance/ -v --benchmark-only
 ```
 
 ---
