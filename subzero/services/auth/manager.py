@@ -379,7 +379,21 @@ class Auth0IntegrationManager:
         public_numbers = self.public_key.public_numbers()
 
         def int_to_base64url(value: int, byte_length: int) -> str:
-            """Convert integer to base64url format"""
+            """
+            Convert integer to base64url-encoded string.
+
+            Parameters
+            ----------
+            value : int
+                Integer value to encode
+            byte_length : int
+                Number of bytes to use for encoding
+
+            Returns
+            -------
+            str
+                Base64url-encoded string without padding
+            """
             byte_data = value.to_bytes(byte_length, byteorder="big")
             return base64.urlsafe_b64encode(byte_data).rstrip(b"=").decode("ascii")
 
