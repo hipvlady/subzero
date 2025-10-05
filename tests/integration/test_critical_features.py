@@ -16,7 +16,7 @@ import time
 
 import pytest
 
-from subzero.services.authorization.abac import ABACEngine, AuthorizationContext
+from subzero.services.authorization.abac import ABACEngine, AuthorizationContext, Effect
 
 # Authorization imports
 from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
@@ -426,8 +426,10 @@ class TestABACPolicies:
             action="delete",
         )
 
-        decision = await abac_engine.evaluate(context)
-        assert decision["allowed"] is True or decision["allowed"] is False  # Depends on policies
+        effect, metadata = await abac_engine.evaluate(context)
+        # Decision could be allow or deny depending on policies
+        assert effect in [Effect.ALLOW, Effect.DENY]
+        assert isinstance(metadata, dict)
 
     @pytest.mark.asyncio
     async def test_public_read_access(self, abac_engine):
@@ -440,10 +442,10 @@ class TestABACPolicies:
             action="read",
         )
 
-        decision = await abac_engine.evaluate(context)
+        effect, metadata = await abac_engine.evaluate(context)
         # Public resources should generally be accessible
-        assert isinstance(decision, dict)
-        assert "allowed" in decision
+        assert effect in [Effect.ALLOW, Effect.DENY]
+        assert isinstance(metadata, dict)
 
     @pytest.mark.asyncio
     async def test_owner_based_access(self, abac_engine):
@@ -457,10 +459,10 @@ class TestABACPolicies:
             action="write",
         )
 
-        decision = await abac_engine.evaluate(context)
+        effect, metadata = await abac_engine.evaluate(context)
         # Owners should generally have write access
-        assert isinstance(decision, dict)
-        assert "allowed" in decision
+        assert effect in [Effect.ALLOW, Effect.DENY]
+        assert isinstance(metadata, dict)
 
     @pytest.mark.asyncio
     async def test_time_based_restrictions(self, abac_engine):
@@ -478,18 +480,21 @@ class TestABACPolicies:
             source_ip="192.168.1.100",
         )
 
-        decision = await abac_engine.evaluate(context)
+        effect, metadata = await abac_engine.evaluate(context)
         # Decision depends on risk score and policies
-        assert isinstance(decision, dict)
-        assert "allowed" in decision
+        assert effect in [Effect.ALLOW, Effect.DENY]
+        assert isinstance(metadata, dict)
 
     def test_abac_metrics(self, abac_engine):
         """Test ABAC metrics collection"""
         metrics = abac_engine.get_metrics()
 
-        assert "cache_hit_rate" in metrics or "total_checks" in metrics
-        # Verify metrics is a dictionary
+        # Verify ABAC-specific metrics
+        assert "total_decisions" in metrics or "policy_count" in metrics
         assert isinstance(metrics, dict)
+        # Verify key metric fields
+        assert "allow_count" in metrics
+        assert "deny_count" in metrics
 
 
 class TestEndToEndIntegration:
@@ -546,10 +551,10 @@ class TestEndToEndIntegration:
             action="read",
         )
 
-        abac_decision = await abac.evaluate(context)
+        effect, metadata = await abac.evaluate(context)
 
-        assert isinstance(abac_decision, dict)
-        assert "allowed" in abac_decision
+        assert effect in [Effect.ALLOW, Effect.DENY]
+        assert isinstance(metadata, dict)
 
         # Cleanup
         await oauth_provider.close()
