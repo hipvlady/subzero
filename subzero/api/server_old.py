@@ -17,13 +17,12 @@ import time
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from subzero import __version__
-from subzero.config.defaults import settings
 from subzero.services.auth.vault import TokenProvider, TokenType
 from subzero.subzeroapp import UnifiedZeroTrustGateway
 

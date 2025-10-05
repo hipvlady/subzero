@@ -16,14 +16,14 @@ import time
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from subzero import __version__
 from subzero.services.auth.vault import TokenProvider, TokenType
-from subzero.services.orchestrator.event_loop import RequestContext, RequestPriority
+from subzero.services.orchestrator.event_loop import RequestPriority
 from subzero.services.security.audit import AuditEvent, AuditEventType, AuditSeverity
 from subzero.services.security.llm_security import LLMSecurityGuard
 from subzero.subzeroapp import UnifiedZeroTrustGateway

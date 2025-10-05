@@ -37,7 +37,7 @@ def test_all_endpoints():
             print(f"  ❌ {endpoint:30s} - MISSING!")
             all_present = False
 
-    print(f"\n📊 Summary:")
+    print("\n📊 Summary:")
     print(f"   Total Routes: {len(routes)}")
     print(f"   Required Endpoints: {len(required_endpoints)}")
     print(f"   All Present: {'✅ YES' if all_present else '❌ NO'}")

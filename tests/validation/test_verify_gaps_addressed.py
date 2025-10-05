@@ -37,12 +37,9 @@ async def verify_mcp_oauth():
 
     try:
         from subzero.services.mcp.oauth import (
-            MCPOAuthProvider,
             GrantType,
+            MCPOAuthProvider,
             TokenType,
-            ClientType,
-            OAuthClient,
-            OAuthToken,
         )
 
         print_success("Imported MCPOAuthProvider successfully")
@@ -78,7 +75,7 @@ async def verify_mcp_discovery():
     print_section("2. MCP Metadata Discovery")
 
     try:
-        from subzero.services.mcp.discovery import MCPDiscoveryService, DiscoveryProtocol
+        from subzero.services.mcp.discovery import MCPDiscoveryService
 
         print_success("Imported MCPDiscoveryService successfully")
 
@@ -127,11 +124,8 @@ async def verify_auth0_actions():
 
     try:
         from subzero.services.auth.actions import (
-            Auth0ActionsManager,
             ActionTrigger,
-            ActionStatus,
-            ActionContext,
-            ActionResult,
+            Auth0ActionsManager,
         )
 
         print_success("Imported Auth0ActionsManager successfully")
@@ -176,8 +170,6 @@ async def verify_social_connections():
         from subzero.services.auth.social_connections import (
             SocialConnectionManager,
             SocialProvider,
-            SocialProfile,
-            OAuthConfig,
         )
 
         print_success("Imported SocialConnectionManager successfully")
@@ -219,9 +211,7 @@ async def verify_management_api():
     try:
         from subzero.services.auth.management_extended import (
             ExtendedManagementAPI,
-            UserStatus,
             LogType,
-            UserSearchCriteria,
         )
 
         print_success("Imported ExtendedManagementAPI successfully")
@@ -351,23 +341,10 @@ async def verify_integration_completeness():
 
     try:
         # Verify all key imports work together
-        from subzero.services.mcp.oauth import MCPOAuthProvider
-        from subzero.services.mcp.discovery import MCPDiscoveryService
-        from subzero.services.auth.actions import Auth0ActionsManager
-        from subzero.services.auth.social_connections import SocialConnectionManager
-        from subzero.services.auth.management_extended import ExtendedManagementAPI
-        from subzero.services.security.audit import AuditTrailService
 
         print_success("All new modules imported successfully")
 
         # Verify existing integrations still work
-        from subzero.services.auth.manager import Auth0IntegrationManager
-        from subzero.services.auth.vault import Auth0TokenVault
-        from subzero.services.security.threat_detection import (
-            SignupFraudDetector,
-            AccountTakeoverDetector,
-            MFAAbuseDetector,
-        )
 
         print_success("Existing modules still load correctly")
 

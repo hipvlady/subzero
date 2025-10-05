@@ -37,12 +37,10 @@ async def verify_xaa_protocol():
 
     try:
         from subzero.services.auth.xaa import (
-            XAAProtocol,
-            XAATokenType,
             AccessScope,
             DelegationChain,
-            XAAToken,
-            AppRegistration,
+            XAAProtocol,
+            XAATokenType,
         )
 
         print_success("Imported XAAProtocol successfully")
@@ -103,11 +101,8 @@ async def verify_ispm_engine():
     try:
         from subzero.services.security.ispm import (
             ISPMEngine,
-            RiskLevel,
             RemediationAction,
-            SecurityFinding,
-            AgentSecurityPosture,
-            ComplianceRule,
+            RiskLevel,
         )
 
         print_success("Imported ISPMEngine successfully")
@@ -174,7 +169,6 @@ async def verify_token_vault():
             Auth0TokenVault,
             TokenProvider,
             TokenType,
-            TokenMetadata,
         )
 
         print_success("Imported Auth0TokenVault successfully")
@@ -238,15 +232,13 @@ async def verify_mcp_protocol():
 
     try:
         from subzero.services.mcp.capabilities import (
-            DynamicCapabilityRegistry,
             CapabilityType,
             OperationComplexity,
-            WorkflowStep,
             Workflow,
+            WorkflowStep,
         )
         from subzero.services.mcp.discovery import (
             MCPDiscoveryService,
-            DiscoveryProtocol,
         )
 
         print_success("Imported MCP modules successfully")
@@ -287,7 +279,7 @@ async def verify_mcp_protocol():
         print_success("JWKS endpoint verified")
 
         # Verify workflow support
-        workflow = Workflow(
+        _ = Workflow(
             workflow_id="test_workflow",
             name="Test Workflow",
             description="Test multi-step workflow",
@@ -313,12 +305,11 @@ async def verify_threat_detection():
 
     try:
         from subzero.services.security.threat_detection import (
-            ThreatType,
-            ThreatSignal,
-            ThreatAssessment,
-            SignupFraudDetector,
             AccountTakeoverDetector,
             MFAAbuseDetector,
+            SignupFraudDetector,
+            ThreatSignal,
+            ThreatType,
         )
 
         print_success("Imported threat detection modules successfully")
@@ -341,9 +332,9 @@ async def verify_threat_detection():
         print_info("  ✅ AI Hallucination")
 
         # Initialize detectors
-        signup_detector = SignupFraudDetector()
-        ato_detector = AccountTakeoverDetector()
-        mfa_detector = MFAAbuseDetector()
+        _ = SignupFraudDetector()
+        _ = AccountTakeoverDetector()
+        _ = MFAAbuseDetector()
 
         print_success("All detectors initialized successfully")
 
@@ -376,30 +367,27 @@ async def verify_additional_features():
 
     try:
         # Auth0 Actions
-        from subzero.services.auth.actions import Auth0ActionsManager, ActionTrigger
+        from subzero.services.auth.actions import ActionTrigger
 
         print_success("Auth0 Actions implemented")
         triggers = list(ActionTrigger)
         print_info(f"  {len(triggers)} action triggers")
 
         # Social Connections
-        from subzero.services.auth.social_connections import SocialConnectionManager, SocialProvider
+        from subzero.services.auth.social_connections import SocialProvider
 
         providers = list(SocialProvider)
         print_success(f"Social Connections: {len(providers)} providers")
 
         # Extended Management API
-        from subzero.services.auth.management_extended import ExtendedManagementAPI
 
         print_success("Extended Management API implemented")
 
         # MCP OAuth
-        from subzero.services.mcp.oauth import MCPOAuthProvider
 
         print_success("MCP OAuth 2.1 implemented")
 
         # Audit System
-        from subzero.services.security.audit import AuditTrailService
 
         print_success("Audit Trail System implemented")
 

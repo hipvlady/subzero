@@ -4,8 +4,6 @@ Verifies all claimed features exist and collects actual performance metrics
 """
 
 import asyncio
-import importlib
-import inspect
 import sys
 import time
 from pathlib import Path
@@ -25,7 +23,7 @@ class FeatureVerifier:
     def verify_mcp_oauth(self):
         """Verify MCP OAuth 2.1 features"""
         try:
-            from subzero.services.mcp.oauth import MCPOAuthProvider, GrantType, TokenType
+            from subzero.services.mcp.oauth import GrantType, MCPOAuthProvider
 
             features = {
                 "OAuth 2.1 Authorization Code Flow": hasattr(MCPOAuthProvider, "authorize_agent"),
@@ -77,7 +75,7 @@ class FeatureVerifier:
     def verify_xaa_protocol(self):
         """Verify XAA Protocol features"""
         try:
-            from subzero.services.auth.xaa import XAAProtocol, XAATokenType, AccessScope
+            from subzero.services.auth.xaa import AccessScope, XAAProtocol, XAATokenType
 
             features = {
                 "Token Delegation": hasattr(XAAProtocol, "delegate_token"),
@@ -125,9 +123,9 @@ class FeatureVerifier:
     def verify_authorization(self):
         """Verify ReBAC, ABAC, OPA features"""
         try:
-            from subzero.services.authorization.rebac import ReBACEngine
             from subzero.services.authorization.abac import ABACEngine
             from subzero.services.authorization.opa import OPAClient
+            from subzero.services.authorization.rebac import ReBACEngine
 
             features = {
                 "ReBAC Engine": True,
@@ -171,7 +169,7 @@ class FeatureVerifier:
         """Measure actual performance metrics"""
         try:
             # Measure ReBAC performance
-            from subzero.services.authorization.rebac import ReBACEngine, AuthzTuple
+            from subzero.services.authorization.rebac import AuthzTuple, ReBACEngine
 
             rebac = ReBACEngine()
             rebac.write_tuple(AuthzTuple("doc", "test", "viewer", "user", "alice"))
@@ -235,17 +233,17 @@ class FeatureVerifier:
                     print(f"  ❌ {feature}")
 
         if self.failed_features:
-            print(f"\n\n❌ FAILED CATEGORIES:")
+            print("\n\n❌ FAILED CATEGORIES:")
             print("-" * 80)
             for category, error in self.failed_features.items():
                 print(f"  {category}: {error}")
 
-        print(f"\n\n🔢 PERFORMANCE METRICS:")
+        print("\n\n🔢 PERFORMANCE METRICS:")
         print("-" * 80)
         for metric, value in self.performance_metrics.items():
             print(f"  📊 {metric}: {value}")
 
-        print(f"\n\n📈 SUMMARY:")
+        print("\n\n📈 SUMMARY:")
         print("-" * 80)
         print(f"  Total Features Verified: {passed_features}/{total_features}")
         print(f"  Success Rate: {(passed_features/total_features)*100:.1f}%")

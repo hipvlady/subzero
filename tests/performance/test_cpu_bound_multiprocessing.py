@@ -29,7 +29,6 @@ import os
 import random
 import statistics
 import sys
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
@@ -42,10 +41,8 @@ from subzero.services.orchestrator.cpu_bound_multiprocessing import (
     CPUBoundProcessor,
     _calculate_analytics_sync,
     _cleanup_cache_entries,
-    _cleanup_cache_sync,
     _generate_coalescing_key_sync,
     _match_patterns_detailed,
-    _match_patterns_sync,
 )
 
 logger = logging.getLogger(__name__)
@@ -254,7 +251,7 @@ async def test_coalescing_key_generation_benchmark():
     print("  Note: Hash key generation is too lightweight (~2μs/op)")
     print("  Multiprocessing overhead (100ms) exceeds benefit for small operations")
     print("  Intelligent threshold correctly disables MP for this operation")
-    print(f"  Status: ✅ PASSED (intelligent optimization)")
+    print("  Status: ✅ PASSED (intelligent optimization)")
 
     # Hash operations are too fast for multiprocessing to help
     # The intelligent threshold correctly uses sequential processing
@@ -321,8 +318,8 @@ async def test_analytics_processing_benchmark():
     # Verify all results show similar performance (both using sequential)
     avg_ratio = statistics.mean([r["time_ratio"] for r in results.values()])
     print(f"  Average processor/sequential ratio: {avg_ratio:.2f}x")
-    print(f"  Expected: ~1.0x (both use sequential)")
-    print(f"  Status: ✅ PASSED (intelligent optimization prevents MP overhead)")
+    print("  Expected: ~1.0x (both use sequential)")
+    print("  Status: ✅ PASSED (intelligent optimization prevents MP overhead)")
 
     # Processor should be similar to sequential (both use sequential internally)
     # Allow up to 2x overhead for async wrapper (still much better than 100ms MP overhead)
@@ -392,7 +389,7 @@ async def test_pattern_matching_benchmark():
     print(f"  Average speedup (≥100 texts): {avg_speedup:.1f}x")
     print("  Note: Pattern matching with 10 patterns = ~1ms/text")
     print("  Total operation time still below multiprocessing threshold")
-    print(f"  Status: ✅ PASSED (intelligent optimization)")
+    print("  Status: ✅ PASSED (intelligent optimization)")
 
     # Pattern matching operations with 10 patterns are still lightweight
     # Allow 0.4x due to test variance (still much better than MP overhead would be)
@@ -453,7 +450,7 @@ async def test_cache_cleanup_benchmark():
     print(f"  Average speedup (≥1000 entries): {avg_speedup:.1f}x")
     print("  Note: Cache cleanup is very fast (~1μs/entry)")
     print("  Intelligent threshold correctly uses sequential")
-    print(f"  Status: ✅ PASSED (intelligent optimization)")
+    print("  Status: ✅ PASSED (intelligent optimization)")
 
     # Cache cleanup is too lightweight for multiprocessing
     assert avg_speedup >= 0.5, f"Sequential should be similar or faster, got {avg_speedup:.1f}x"
