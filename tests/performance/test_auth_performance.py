@@ -232,8 +232,11 @@ class TestSIMDOperations:
         avg_time = statistics.mean(times)
         avg_ns_per_hash = (avg_time / 128) * 1_000_000_000
 
-        assert avg_ns_per_hash < 1000, f"SIMD hashing too slow: {avg_ns_per_hash:.0f}ns per hash"
-        print(f"✅ SIMD hashing: {avg_ns_per_hash:.0f}ns per hash")
+        threshold_ns = get_threshold(1000, ci_multiplier=5.0)  # Local: 1000ns, CI: 5000ns
+        assert (
+            avg_ns_per_hash < threshold_ns
+        ), f"SIMD hashing too slow: {avg_ns_per_hash:.0f}ns per hash (threshold: {threshold_ns}ns)"
+        print(f"✅ SIMD hashing: {avg_ns_per_hash:.0f}ns per hash (threshold: <{threshold_ns}ns, CI: {is_ci()})")
 
     def test_xxhash_vs_fnv_performance(self):
         """Compare xxHash64 vs FNV-1a performance"""
@@ -243,9 +246,14 @@ class TestSIMDOperations:
         print(f"xxHash time: {results['xxhash_time_ms']:.2f}ms")
         print(f"Speedup: {results['speedup']:.1f}x")
 
-        # Both should be reasonably fast
-        assert results["fnv1a_time_ms"] < 10.0, "FNV-1a too slow"
-        assert results["xxhash_time_ms"] < 10.0, "xxHash too slow"
+        # Both should be reasonably fast (CI-aware)
+        threshold_ms = get_threshold(10.0, ci_multiplier=5.0)  # Local: 10ms, CI: 50ms
+        assert (
+            results["fnv1a_time_ms"] < threshold_ms
+        ), f"FNV-1a too slow: {results['fnv1a_time_ms']:.2f}ms (threshold: {threshold_ms}ms)"
+        assert (
+            results["xxhash_time_ms"] < threshold_ms
+        ), f"xxHash too slow: {results['xxhash_time_ms']:.2f}ms (threshold: {threshold_ms}ms)"
 
     def test_single_hash_performance(self):
         """Test individual hash function performance"""
@@ -260,8 +268,9 @@ class TestSIMDOperations:
             times.append(elapsed * 1_000_000_000)  # Convert to ns
 
         avg_ns = statistics.mean(times)
-        assert avg_ns < 100, f"Single hash too slow: {avg_ns:.0f}ns"
-        print(f"✅ Single xxHash64: {avg_ns:.0f}ns")
+        threshold_ns = get_threshold(100, ci_multiplier=10.0)  # Local: 100ns, CI: 1000ns
+        assert avg_ns < threshold_ns, f"Single hash too slow: {avg_ns:.0f}ns (threshold: {threshold_ns}ns)"
+        print(f"✅ Single xxHash64: {avg_ns:.0f}ns (threshold: <{threshold_ns}ns, CI: {is_ci()})")
 
 
 class TestTokenPool:
@@ -312,7 +321,8 @@ class TestTokenPool:
 
         if times:
             avg_ms = statistics.mean(times)
-            assert avg_ms < 0.1, f"Token consumption too slow: {avg_ms:.3f}ms"
+            threshold_ms = get_threshold(0.1, ci_multiplier=5.0)  # Local: 0.1ms, CI: 0.5ms
+            assert avg_ms < threshold_ms, f"Token consumption too slow: {avg_ms:.3f}ms (threshold: {threshold_ms}ms)"
             print(f"✅ Token pool consumption: {avg_ms:.3f}ms")
 
     @pytest.mark.asyncio
