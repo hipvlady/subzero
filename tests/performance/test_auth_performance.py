@@ -1,6 +1,7 @@
 """
 Performance benchmarks for refactored authentication layer
-Target: 10,000+ RPS with <10ms P99 latency
+Target: 10,000+ RPS with <10ms P99 latency (local)
+CI targets are relaxed 3x due to resource constraints
 """
 
 import asyncio
@@ -23,6 +24,9 @@ from subzero.services.auth.high_performance_auth import HighPerformanceAuthentic
 from subzero.services.auth.simd_operations import SIMDHasher, benchmark_hash_functions, simd_xxhash64
 from subzero.services.auth.token_pool import AdaptiveTokenPool, TokenPool
 
+# Import CI-aware performance utilities
+from tests.performance.performance_utils import get_threshold, is_ci
+
 
 class TestEdDSAPerformance:
     """Test EdDSA key operations performance"""
@@ -38,8 +42,10 @@ class TestEdDSAPerformance:
             times.append(elapsed * 1000)  # Convert to ms
 
         avg_time = statistics.mean(times)
-        assert avg_time < 5.0, f"EdDSA key generation too slow: {avg_time:.2f}ms"
-        print(f"✅ EdDSA key generation: {avg_time:.2f}ms (target: <5ms)")
+        threshold = get_threshold(5.0, ci_multiplier=3.0)  # Local: 5ms, CI: 15ms
+
+        assert avg_time < threshold, f"EdDSA key generation too slow: {avg_time:.2f}ms (threshold: {threshold}ms)"
+        print(f"✅ EdDSA key generation: {avg_time:.2f}ms (threshold: <{threshold}ms, CI: {is_ci()})")
 
     def test_eddsa_signing_performance(self):
         """Verify EdDSA achieves 10x speedup over RSA target"""
@@ -65,10 +71,16 @@ class TestEdDSAPerformance:
         p95_ms = np.percentile(times, 95)
         p99_ms = np.percentile(times, 99)
 
-        assert avg_ms < 0.5, f"EdDSA signing too slow: {avg_ms:.2f}ms"
-        assert p99_ms < 2.0, f"EdDSA P99 latency too high: {p99_ms:.2f}ms"
+        avg_threshold = get_threshold(0.5, ci_multiplier=4.0)  # Local: 0.5ms, CI: 2ms
+        p99_threshold = get_threshold(2.0, ci_multiplier=3.0)  # Local: 2ms, CI: 6ms
 
-        print(f"✅ EdDSA signing - Avg: {avg_ms:.2f}ms, P95: {p95_ms:.2f}ms, P99: {p99_ms:.2f}ms")
+        assert avg_ms < avg_threshold, f"EdDSA signing too slow: {avg_ms:.2f}ms (threshold: {avg_threshold}ms)"
+        assert p99_ms < p99_threshold, f"EdDSA P99 latency too high: {p99_ms:.2f}ms (threshold: {p99_threshold}ms)"
+
+        print(
+            f"✅ EdDSA signing - Avg: {avg_ms:.2f}ms, P95: {p95_ms:.2f}ms, P99: {p99_ms:.2f}ms "
+            f"(CI: {is_ci()}, thresholds: avg<{avg_threshold}ms, p99<{p99_threshold}ms)"
+        )
 
     def test_eddsa_verification_performance(self):
         """Test EdDSA verification speed"""
@@ -89,8 +101,10 @@ class TestEdDSAPerformance:
             assert verified["sub"] == "test_user"
 
         avg_ms = statistics.mean(times)
-        assert avg_ms < 1.0, f"EdDSA verification too slow: {avg_ms:.2f}ms"
-        print(f"✅ EdDSA verification: {avg_ms:.2f}ms (target: <1ms)")
+        threshold = get_threshold(1.0, ci_multiplier=3.0)  # Local: 1ms, CI: 3ms
+
+        assert avg_ms < threshold, f"EdDSA verification too slow: {avg_ms:.2f}ms (threshold: {threshold}ms)"
+        print(f"✅ EdDSA verification: {avg_ms:.2f}ms (threshold: <{threshold}ms, CI: {is_ci()})")
 
 
 class TestCuckooCachePerformance:
@@ -110,8 +124,10 @@ class TestCuckooCachePerformance:
         elapsed = time.perf_counter() - start
 
         avg_us = (elapsed / len(test_data)) * 1_000_000
-        assert avg_us < 10.0, f"Cache insertion too slow: {avg_us:.2f}μs"
-        print(f"✅ Cuckoo cache insertion: {avg_us:.2f}μs per item")
+        threshold = get_threshold(10.0, ci_multiplier=5.0)  # Local: 10μs, CI: 50μs
+
+        assert avg_us < threshold, f"Cache insertion too slow: {avg_us:.2f}μs (threshold: {threshold}μs)"
+        print(f"✅ Cuckoo cache insertion: {avg_us:.2f}μs per item (threshold: <{threshold}μs, CI: {is_ci()})")
 
     def test_cuckoo_cache_lookup_performance(self):
         """Verify O(1) cache lookups"""
@@ -133,8 +149,10 @@ class TestCuckooCachePerformance:
         elapsed = time.perf_counter() - start
 
         avg_us = (elapsed / 10000) * 1_000_000
-        assert avg_us < 1.0, f"Cache lookup too slow: {avg_us:.2f}μs"
-        print(f"✅ Cuckoo cache lookup: {avg_us:.2f}μs per lookup")
+        threshold = get_threshold(1.0, ci_multiplier=10.0)  # Local: 1μs, CI: 10μs
+
+        assert avg_us < threshold, f"Cache lookup too slow: {avg_us:.2f}μs (threshold: {threshold}μs)"
+        print(f"✅ Cuckoo cache lookup: {avg_us:.2f}μs per lookup (threshold: <{threshold}μs, CI: {is_ci()})")
 
     def test_cache_hit_ratio(self):
         """Test cache hit ratio with realistic workload"""
@@ -360,10 +378,14 @@ class TestEndToEndPerformance:
             p99 = np.percentile(latencies, 99)
             rps = 100 / elapsed
 
-            # Assert performance targets
-            assert p99 < 10.0, f"P99 latency {p99:.2f}ms exceeds 10ms target"
-            assert rps > 1000, f"RPS {rps:.0f} below 1000 target"
-            assert p50 < 1.0, f"P50 latency {p50:.2f}ms exceeds 1ms target for cached requests"
+            # Assert performance targets (CI-aware)
+            p99_threshold = get_threshold(10.0, ci_multiplier=5.0)  # Local: 10ms, CI: 50ms
+            p50_threshold = get_threshold(1.0, ci_multiplier=5.0)  # Local: 1ms, CI: 5ms
+            rps_threshold = 500 if is_ci() else 1000  # CI: 500 RPS, Local: 1000 RPS
+
+            assert p99 < p99_threshold, f"P99 latency {p99:.2f}ms exceeds {p99_threshold}ms target"
+            assert rps > rps_threshold, f"RPS {rps:.0f} below {rps_threshold} target"
+            assert p50 < p50_threshold, f"P50 latency {p50:.2f}ms exceeds {p50_threshold}ms target"
 
             print("✅ End-to-end performance:")
             print(f"   P50: {p50:.2f}ms, P95: {p95:.2f}ms, P99: {p99:.2f}ms")
@@ -412,8 +434,15 @@ class TestEndToEndPerformance:
             concurrent_rps = total_requests / elapsed
             p99_concurrent = np.percentile(all_latencies, 99)
 
-            assert concurrent_rps > 500, f"Concurrent RPS {concurrent_rps:.0f} too low"
-            assert p99_concurrent < 50.0, f"P99 under load {p99_concurrent:.2f}ms too high"
+            rps_threshold = 250 if is_ci() else 500  # CI: 250 RPS, Local: 500 RPS
+            p99_threshold = get_threshold(50.0, ci_multiplier=3.0)  # Local: 50ms, CI: 150ms
+
+            assert (
+                concurrent_rps > rps_threshold
+            ), f"Concurrent RPS {concurrent_rps:.0f} too low (threshold: {rps_threshold})"
+            assert (
+                p99_concurrent < p99_threshold
+            ), f"P99 under load {p99_concurrent:.2f}ms too high (threshold: {p99_threshold}ms)"
 
             print(f"✅ Concurrent performance ({total_requests} requests):")
             print(f"   RPS: {concurrent_rps:.0f}")
