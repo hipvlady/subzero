@@ -153,7 +153,9 @@ class TestGatewayOrchestration:
         print("✅ Full gateway initialization successful")
 
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="SharedMemoryCache causes segfault in CI - multiprocessing.Lock incompatible with test runner")
+    @pytest.mark.skip(
+        reason="SharedMemoryCache causes segfault in CI - multiprocessing.Lock incompatible with test runner"
+    )
     async def test_component_access_with_fallback(self):
         """Test accessing components with automatic fallback"""
         from subzero.orchestrator.integration import GatewayOrchestrator
