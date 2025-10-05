@@ -28,7 +28,18 @@ from subzero.config.defaults import settings
 
 
 class XAATokenType(str, Enum):
-    """Types of XAA tokens"""
+    """
+    Types of XAA tokens.
+
+    Attributes
+    ----------
+    PRIMARY : str
+        Original user/agent token for direct access
+    DELEGATED : str
+        Delegated access token created through delegation chain
+    IMPERSONATION : str
+        Impersonation token for acting on behalf of another user
+    """
 
     PRIMARY = "primary"  # Original user/agent token
     DELEGATED = "delegated"  # Delegated access token
@@ -36,7 +47,22 @@ class XAATokenType(str, Enum):
 
 
 class AccessScope(str, Enum):
-    """XAA access scopes"""
+    """
+    XAA access scopes for permission control.
+
+    Attributes
+    ----------
+    READ : str
+        Read-only access to resources
+    WRITE : str
+        Write access to modify resources
+    EXECUTE : str
+        Execute operations and actions
+    ADMIN : str
+        Administrative privileges
+    DELEGATE : str
+        Permission to delegate tokens to other agents
+    """
 
     READ = "xaa:read"
     WRITE = "xaa:write"
@@ -47,7 +73,31 @@ class AccessScope(str, Enum):
 
 @dataclass
 class DelegationChain:
-    """Track delegation chain for audit and security"""
+    """
+    Track delegation chain for audit and security.
+
+    Maintains the complete delegation path for XAA tokens to enable
+    audit trails and prevent circular delegations.
+
+    Attributes
+    ----------
+    chain_id : str
+        Unique identifier for this delegation chain
+    initiator : str
+        Original user or agent who started the chain
+    current_holder : str
+        Current token holder (most recent delegate)
+    delegation_path : list of str
+        Complete ordered list of all agents in chain
+    depth : int
+        Current delegation depth (number of hops)
+    max_depth : int
+        Maximum allowed delegation depth
+    created_at : float
+        Unix timestamp when chain was created
+    expires_at : float
+        Unix timestamp when chain expires
+    """
 
     chain_id: str
     initiator: str  # Original user/agent
@@ -61,7 +111,33 @@ class DelegationChain:
 
 @dataclass
 class XAAToken:
-    """Cross App Access token"""
+    """
+    Cross App Access token.
+
+    Represents an XAA token with all associated metadata including
+    delegation chain, scopes, and lifecycle information.
+
+    Attributes
+    ----------
+    token_id : str
+        Unique token identifier (JWT ID)
+    token_type : XAATokenType
+        Type of token (PRIMARY, DELEGATED, IMPERSONATION)
+    subject : str
+        Agent or user ID who owns the token
+    audience : str
+        Target application ID for this token
+    scopes : set of str
+        Set of granted access scopes
+    delegation_chain : DelegationChain, optional
+        Associated delegation chain if token is delegated
+    issued_at : float
+        Unix timestamp when token was issued
+    expires_at : float
+        Unix timestamp when token expires
+    metadata : dict
+        Additional token metadata
+    """
 
     token_id: str
     token_type: XAATokenType
@@ -76,7 +152,31 @@ class XAAToken:
 
 @dataclass
 class AppRegistration:
-    """Registered application for XAA"""
+    """
+    Registered application for XAA.
+
+    Contains application metadata and authorization policies for
+    XAA protocol interactions.
+
+    Attributes
+    ----------
+    app_id : str
+        Unique application identifier
+    app_name : str
+        Human-readable application name
+    app_type : str
+        Application type: "web", "service", or "agent"
+    allowed_scopes : set of str
+        Set of scopes this application is permitted to use
+    allowed_delegations : bool
+        Whether this application can receive delegated tokens
+    max_delegation_depth : int
+        Maximum delegation chain depth allowed for this app
+    callback_urls : list of str
+        OAuth callback URLs for bidirectional communication
+    public_key : str, optional
+        Public key for token verification (PEM format)
+    """
 
     app_id: str
     app_name: str
@@ -90,18 +190,30 @@ class AppRegistration:
 
 class XAAProtocol:
     """
-    Cross App Access Protocol Implementation
-    Enables secure multi-hop agent-to-app communication
+    Cross App Access Protocol Implementation.
+
+    Enables secure multi-hop agent-to-app communication using OAuth 2.0
+    token delegation with scope reduction and chain tracking.
+
+    Implements Okta's XAA protocol for:
+    - Token delegation with chain tracking
+    - Bidirectional agent-app communication
+    - Just-in-time access provisioning
+    - Capability-based authorization
     """
 
     def __init__(self, issuer: str, signing_key: rsa.RSAPrivateKey | None = None, okta_domain: str | None = None):
         """
-        Initialize XAA protocol
+        Initialize XAA protocol.
 
-        Args:
-            issuer: XAA token issuer URL
-            signing_key: RSA private key for token signing
-            okta_domain: Okta domain for integration
+        Parameters
+        ----------
+        issuer : str
+            XAA token issuer URL (will be stripped of trailing slash)
+        signing_key : rsa.RSAPrivateKey, optional
+            RSA private key for token signing. If None, generates new 2048-bit key.
+        okta_domain : str, optional
+            Okta domain for integration (e.g., 'dev-12345.okta.com')
         """
         self.issuer = issuer.rstrip("/")
         self.okta_domain = okta_domain
@@ -145,18 +257,40 @@ class XAAProtocol:
         max_delegation_depth: int = 3,
     ) -> AppRegistration:
         """
-        Register application for XAA
+        Register application for XAA.
 
-        Args:
-            app_id: Unique application identifier
-            app_name: Human-readable name
-            app_type: Application type
-            allowed_scopes: Permitted XAA scopes
-            callback_urls: OAuth callback URLs
-            max_delegation_depth: Maximum delegation depth
+        Creates an application registration with authorization policies
+        for XAA protocol interactions.
 
-        Returns:
-            Application registration
+        Parameters
+        ----------
+        app_id : str
+            Unique application identifier
+        app_name : str
+            Human-readable application name
+        app_type : str
+            Application type: "web", "service", or "agent"
+        allowed_scopes : set of str
+            Set of permitted XAA scopes for this application
+        callback_urls : list of str, optional
+            OAuth callback URLs for bidirectional communication
+        max_delegation_depth : int, default=3
+            Maximum delegation chain depth allowed
+
+        Returns
+        -------
+        AppRegistration
+            Created application registration object
+
+        Examples
+        --------
+        >>> app = await xaa.register_application(
+        ...     app_id="app_123",
+        ...     app_name="Data Service",
+        ...     app_type="service",
+        ...     allowed_scopes={AccessScope.READ, AccessScope.WRITE},
+        ...     callback_urls=["https://api.example.com/callback"]
+        ... )
         """
         app_registration = AppRegistration(
             app_id=app_id,
@@ -183,18 +317,49 @@ class XAAProtocol:
         metadata: dict | None = None,
     ) -> str:
         """
-        Issue XAA token
+        Issue XAA token.
 
-        Args:
-            subject: Agent or user ID
-            audience: Target application
-            scopes: Requested scopes
-            token_type: Type of XAA token
-            expires_in: Token lifetime (seconds)
-            metadata: Additional metadata
+        Creates and signs a JWT token for XAA protocol with scope
+        validation and application verification.
 
-        Returns:
-            JWT token string
+        Parameters
+        ----------
+        subject : str
+            Agent or user ID requesting the token
+        audience : str
+            Target application ID that will receive requests
+        scopes : set of str
+            Requested access scopes (must be subset of app's allowed_scopes)
+        token_type : XAATokenType, default=XAATokenType.PRIMARY
+            Type of token to issue (PRIMARY, DELEGATED, IMPERSONATION)
+        expires_in : int, default=3600
+            Token lifetime in seconds
+        metadata : dict, optional
+            Additional token metadata to include in claims
+
+        Returns
+        -------
+        str
+            Signed JWT token string in compact serialization format
+
+        Raises
+        ------
+        ValueError
+            If application is not registered or scopes are invalid
+
+        Notes
+        -----
+        The JWT token includes standard claims (iss, sub, aud, iat, exp, jti)
+        plus XAA-specific claims (token_type, scopes, xaa_version).
+
+        Examples
+        --------
+        >>> token = await xaa.issue_token(
+        ...     subject="agent_456",
+        ...     audience="app_123",
+        ...     scopes={AccessScope.READ, AccessScope.WRITE},
+        ...     expires_in=7200
+        ... )
         """
         self.token_issued_count += 1
         start_time = time.perf_counter()
@@ -263,17 +428,61 @@ class XAAProtocol:
         expires_in: int = 1800,
     ) -> str:
         """
-        Delegate XAA token to another agent/app
+        Delegate XAA token to another agent/app.
 
-        Args:
-            original_token: Original JWT token
-            target_subject: Target agent/user
-            target_audience: Target application
-            scopes: Optional scope restriction
-            expires_in: Delegation token lifetime
+        Implements XAA protocol token delegation with chain tracking,
+        scope reduction, and depth control for secure multi-hop access.
 
-        Returns:
-            Delegated JWT token
+        Parameters
+        ----------
+        original_token : str
+            Original JWT token to delegate from
+        target_subject : str
+            Target agent or user ID receiving delegated token
+        target_audience : str
+            Target application ID for delegated access
+        scopes : set of str, optional
+            Restricted scope set (must be subset of original scopes).
+            If None, inherits all scopes from original token.
+        expires_in : int, default=1800
+            Delegation token lifetime in seconds (default 30 minutes)
+
+        Returns
+        -------
+        str
+            Delegated JWT token string with reduced scopes
+
+        Raises
+        ------
+        ValueError
+            If original token is invalid, max delegation depth exceeded,
+            or target application doesn't allow delegations
+
+        Notes
+        -----
+        XAA Delegation Protocol:
+        - Enforces scope reduction (cannot escalate privileges)
+        - Tracks complete delegation chain for audit
+        - Maximum depth configurable via settings.XAA_MAX_DELEGATION_DEPTH
+        - Each delegation increments chain depth counter
+        - Delegated token includes chain metadata
+
+        Security:
+        - Cannot delegate scopes not in original token
+        - Chain validation prevents circular delegations
+        - All delegations are logged with full path
+
+        Examples
+        --------
+        >>> delegated = await xaa.delegate_token(
+        ...     original_token="eyJ0eXAi...",
+        ...     target_subject="agent_789",
+        ...     target_audience="app_456",
+        ...     scopes={AccessScope.READ}  # Reduced from original
+        ... )
+        >>> claims = jwt.decode(delegated, verify=False)
+        >>> print(claims['metadata']['delegation_depth'])
+        1
         """
         self.delegation_count += 1
         start_time = time.perf_counter()
@@ -341,14 +550,44 @@ class XAAProtocol:
 
     async def verify_token(self, token_string: str, expected_audience: str | None = None) -> tuple[bool, dict | None]:
         """
-        Verify XAA token
+        Verify XAA token.
 
-        Args:
-            token_string: JWT token to verify
-            expected_audience: Expected audience (optional)
+        Validates JWT signature, expiration, and scope claims for XAA token.
 
-        Returns:
-            Tuple of (is_valid, claims)
+        Parameters
+        ----------
+        token_string : str
+            JWT token string to verify
+        expected_audience : str, optional
+            Expected audience claim for validation. If None, audience is not verified.
+
+        Returns
+        -------
+        tuple of (bool, dict or None)
+            - is_valid : bool
+                True if token is valid and active
+            - claims : dict or None
+                Token claims if valid, None otherwise
+
+        Notes
+        -----
+        Verification steps:
+        1. JWT signature validation using public key
+        2. Audience claim verification (if expected_audience provided)
+        3. Token existence check in active_tokens registry
+        4. Expiration time validation
+        5. Scope subset validation
+
+        Expired tokens are automatically removed from active_tokens.
+
+        Examples
+        --------
+        >>> is_valid, claims = await xaa.verify_token(
+        ...     token_string,
+        ...     expected_audience="app_123"
+        ... )
+        >>> if is_valid:
+        ...     print(f"Token valid for: {claims['sub']}")
         """
         self.verification_count += 1
 
@@ -388,13 +627,30 @@ class XAAProtocol:
 
     async def revoke_token(self, token_string: str) -> bool:
         """
-        Revoke XAA token
+        Revoke XAA token.
 
-        Args:
-            token_string: JWT token to revoke
+        Immediately invalidates a token by removing it from active registry.
 
-        Returns:
-            True if revoked successfully
+        Parameters
+        ----------
+        token_string : str
+            JWT token string to revoke
+
+        Returns
+        -------
+        bool
+            True if token was found and revoked, False otherwise
+
+        Notes
+        -----
+        Token revocation is immediate and irreversible. The token
+        will fail all future verification attempts.
+
+        Examples
+        --------
+        >>> success = await xaa.revoke_token(token_string)
+        >>> if success:
+        ...     print("Token revoked successfully")
         """
         try:
             claims = jwt.decode(
@@ -416,13 +672,35 @@ class XAAProtocol:
 
     async def revoke_delegation_chain(self, chain_id: str) -> int:
         """
-        Revoke entire delegation chain
+        Revoke entire delegation chain.
 
-        Args:
-            chain_id: Delegation chain ID
+        Revokes all tokens in a delegation chain, invalidating the entire
+        chain from initiator through all delegated tokens.
 
-        Returns:
-            Number of tokens revoked
+        Parameters
+        ----------
+        chain_id : str
+            Delegation chain ID to revoke
+
+        Returns
+        -------
+        int
+            Number of tokens revoked from the chain
+
+        Notes
+        -----
+        Chain revocation is cascading - revoking a chain invalidates:
+        - The original token (if tracked in chain)
+        - All delegated tokens in the chain
+        - The chain metadata itself
+
+        This is useful for emergency revocation when a delegation
+        path is compromised.
+
+        Examples
+        --------
+        >>> count = await xaa.revoke_delegation_chain("chain_abc123")
+        >>> print(f"Revoked {count} tokens in chain")
         """
         if chain_id not in self.delegation_chains:
             return 0
@@ -449,13 +727,54 @@ class XAAProtocol:
 
     async def introspect_token(self, token_string: str) -> dict:
         """
-        Introspect XAA token (RFC 7662)
+        Introspect XAA token (RFC 7662).
 
-        Args:
-            token_string: JWT token
+        Returns detailed token metadata including delegation information
+        following OAuth 2.0 Token Introspection standard.
 
-        Returns:
-            Token introspection response
+        Parameters
+        ----------
+        token_string : str
+            JWT token to introspect
+
+        Returns
+        -------
+        dict
+            Token introspection response with fields:
+            - 'active' : bool
+                Whether token is currently active
+            - 'token_type' : str
+                Token type (if active)
+            - 'scope' : str
+                Space-separated scope list (if active)
+            - 'sub' : str
+                Subject identifier (if active)
+            - 'aud' : str
+                Audience identifier (if active)
+            - 'iss' : str
+                Issuer identifier (if active)
+            - 'exp' : int
+                Expiration timestamp (if active)
+            - 'iat' : int
+                Issued at timestamp (if active)
+            - 'delegation' : dict, optional
+                Delegation chain info if token is delegated:
+                - 'chain_id' : str
+                - 'depth' : int
+                - 'initiator' : str
+                - 'path' : list of str
+
+        Notes
+        -----
+        Implements RFC 7662 OAuth 2.0 Token Introspection with
+        XAA-specific extensions for delegation chain tracking.
+
+        Examples
+        --------
+        >>> info = await xaa.introspect_token(token_string)
+        >>> if info['active']:
+        ...     if 'delegation' in info:
+        ...         print(f"Delegated token, depth: {info['delegation']['depth']}")
         """
         is_valid, claims = await self.verify_token(token_string)
 
@@ -489,10 +808,32 @@ class XAAProtocol:
 
     async def sync_with_okta(self) -> bool:
         """
-        Sync XAA tokens with Okta ecosystem
+        Sync XAA tokens with Okta ecosystem.
 
-        Returns:
-            True if successful
+        Registers all XAA applications with Okta OAuth 2.0 infrastructure
+        for integration with Okta's identity platform.
+
+        Returns
+        -------
+        bool
+            True if sync completed successfully, False if no Okta domain configured
+
+        Notes
+        -----
+        Syncs application registrations to Okta, enabling:
+        - OAuth 2.0 flows with Okta authorization server
+        - Single Sign-On (SSO) integration
+        - Centralized identity management
+        - Policy-based access control
+
+        Requires okta_domain to be configured during initialization.
+
+        Examples
+        --------
+        >>> xaa = XAAProtocol(issuer="https://api.example.com", okta_domain="dev-12345.okta.com")
+        >>> success = await xaa.sync_with_okta()
+        >>> if success:
+        ...     print(f"Synced {len(xaa.applications)} apps")
         """
         if not self.okta_domain:
             return False
@@ -506,7 +847,19 @@ class XAAProtocol:
         return True
 
     async def _register_app_with_okta(self, app: AppRegistration) -> bool:
-        """Register application with Okta"""
+        """
+        Register application with Okta.
+
+        Parameters
+        ----------
+        app : AppRegistration
+            Application registration to sync with Okta
+
+        Returns
+        -------
+        bool
+            True if registration successful
+        """
         if not self.okta_domain:
             return False
 
@@ -529,7 +882,23 @@ class XAAProtocol:
             return False
 
     def _get_or_create_chain(self, original_token_id: str, initiator: str, current_holder: str) -> DelegationChain:
-        """Get existing or create new delegation chain"""
+        """
+        Get existing or create new delegation chain.
+
+        Parameters
+        ----------
+        original_token_id : str
+            Original token's JWT ID
+        initiator : str
+            Agent/user who started the chain
+        current_holder : str
+            Current token holder
+
+        Returns
+        -------
+        DelegationChain
+            Existing chain if token has one, otherwise creates new chain
+        """
         # Check if token already has a chain
         original_token = self.active_tokens.get(original_token_id)
 
@@ -557,11 +926,47 @@ class XAAProtocol:
         return chain
 
     def _generate_token_id(self) -> str:
-        """Generate unique token ID"""
+        """
+        Generate unique token ID.
+
+        Returns
+        -------
+        str
+            URL-safe token identifier (32 bytes, base64-encoded)
+        """
         return secrets.token_urlsafe(32)
 
     def get_metrics(self) -> dict:
-        """Get XAA protocol metrics"""
+        """
+        Get XAA protocol metrics.
+
+        Returns
+        -------
+        dict
+            Protocol metrics:
+            - 'token_issued_count' : int
+                Total tokens issued
+            - 'delegation_count' : int
+                Total delegations performed
+            - 'verification_count' : int
+                Total verification attempts
+            - 'rejected_count' : int
+                Total rejected operations
+            - 'active_tokens' : int
+                Currently active tokens
+            - 'active_delegations' : int
+                Currently active delegated tokens
+            - 'registered_apps' : int
+                Number of registered applications
+            - 'delegation_chains' : int
+                Number of active delegation chains
+
+        Examples
+        --------
+        >>> metrics = xaa.get_metrics()
+        >>> print(f"Active tokens: {metrics['active_tokens']}")
+        >>> print(f"Delegation rate: {metrics['delegation_count'] / metrics['token_issued_count']:.2%}")
+        """
         active_delegations = sum(
             1 for token in self.active_tokens.values() if token.token_type == XAATokenType.DELEGATED
         )
@@ -578,7 +983,41 @@ class XAAProtocol:
         }
 
     def get_public_key_jwk(self) -> dict:
-        """Get public key in JWK format"""
+        """
+        Get public key in JWK format.
+
+        Returns the RSA public key in JSON Web Key (JWK) format
+        for token verification by external services.
+
+        Returns
+        -------
+        dict
+            JWK representation with fields:
+            - 'kty' : str
+                Key type (RSA)
+            - 'use' : str
+                Public key use (sig for signature)
+            - 'kid' : str
+                Key ID (xaa-key-1)
+            - 'alg' : str
+                Algorithm (RS256)
+            - 'n' : str
+                RSA modulus (base64url-encoded)
+            - 'e' : str
+                RSA exponent (base64url-encoded)
+
+        Notes
+        -----
+        JWK format follows RFC 7517 for representing cryptographic keys
+        in JSON. This is the standard format for JWKS (JSON Web Key Set)
+        endpoints used in OAuth 2.0 and OpenID Connect.
+
+        Examples
+        --------
+        >>> jwk = xaa.get_public_key_jwk()
+        >>> print(jwk['kid'])
+        xaa-key-1
+        """
         public_numbers = self.public_key.public_numbers()
 
         def to_base64url(num: int, length: int) -> str:
@@ -600,18 +1039,56 @@ class XAAProtocol:
         self, token: str, target_app_id: str, method: str, endpoint: str, payload: dict | None = None
     ) -> dict:
         """
-        Send authenticated request to registered application
+        Send authenticated request to registered application.
+
         Bidirectional communication: Agent → App
+        Uses XAA token for authenticated API calls to registered applications.
 
-        Args:
-            token: XAA access token
-            target_app_id: Target application ID
-            method: HTTP method (GET, POST, PUT, DELETE)
-            endpoint: API endpoint path
-            payload: Request payload
+        Parameters
+        ----------
+        token : str
+            XAA access token with appropriate scopes
+        target_app_id : str
+            Target application ID (must be registered)
+        method : str
+            HTTP method: GET, POST, PUT, PATCH, or DELETE
+        endpoint : str
+            API endpoint path (will be appended to callback URL)
+        payload : dict, optional
+            Request payload for POST/PUT/PATCH methods
 
-        Returns:
-            Response from target application
+        Returns
+        -------
+        dict
+            Response dictionary:
+            - 'success' : bool
+                Whether request succeeded
+            - 'status_code' : int
+                HTTP status code (if request completed)
+            - 'data' : dict or str
+                Response data (if available)
+            - 'error' : str
+                Error message (if failed)
+
+        Notes
+        -----
+        Bidirectional XAA Communication:
+        - Agent sends authenticated requests to app
+        - Token verified for audience match
+        - Uses first registered callback URL as base
+        - Custom headers include XAA version and delegation chain
+
+        Examples
+        --------
+        >>> response = await xaa.send_app_request(
+        ...     token=agent_token,
+        ...     target_app_id="app_123",
+        ...     method="POST",
+        ...     endpoint="/api/data",
+        ...     payload={"query": "fetch_records"}
+        ... )
+        >>> if response['success']:
+        ...     print(response['data'])
         """
         # Verify token
         try:
@@ -679,16 +1156,51 @@ class XAAProtocol:
 
     async def receive_app_callback(self, callback_token: str, data: dict, source_app_id: str) -> dict:
         """
-        Receive callback from registered application
+        Receive callback from registered application.
+
         Bidirectional communication: App → Agent
+        Processes callbacks from applications including approvals,
+        notifications, and data responses.
 
-        Args:
-            callback_token: XAA callback token
-            data: Callback payload
-            source_app_id: Source application ID
+        Parameters
+        ----------
+        callback_token : str
+            XAA callback token for authentication
+        data : dict
+            Callback payload with 'type' and 'payload' fields
+        source_app_id : str
+            Source application ID initiating callback
 
-        Returns:
-            Processing result
+        Returns
+        -------
+        dict
+            Processing result:
+            - 'success' : bool
+                Whether callback was processed successfully
+            - 'action' : str
+                Action taken (e.g., 'approval_pending', 'notification_received')
+            - Additional fields based on callback type
+
+        Notes
+        -----
+        Supported callback types:
+        - 'approval_request': Human-in-the-loop approval workflow
+        - 'notification': Generic notification delivery
+        - 'data_response': Data query response
+        - 'error': Error notification from application
+
+        Examples
+        --------
+        >>> result = await xaa.receive_app_callback(
+        ...     callback_token=app_token,
+        ...     data={
+        ...         "type": "approval_request",
+        ...         "payload": {"request_id": "req_123", "action": "transfer_funds"}
+        ...     },
+        ...     source_app_id="banking_app"
+        ... )
+        >>> if result['success']:
+        ...     print(f"Approval pending: {result['callback_id']}")
         """
         try:
             # Verify callback token
@@ -733,16 +1245,61 @@ class XAAProtocol:
 
     async def establish_bidirectional_channel(self, agent_id: str, app_id: str, scopes: set[str]) -> dict:
         """
-        Establish bidirectional communication channel
+        Establish bidirectional communication channel.
+
         Agent ↔ App persistent connection
+        Creates paired tokens for two-way authenticated communication
+        between agent and application.
 
-        Args:
-            agent_id: Agent identifier
-            app_id: Application identifier
-            scopes: Communication scopes
+        Parameters
+        ----------
+        agent_id : str
+            Agent identifier
+        app_id : str
+            Application identifier (must be registered)
+        scopes : set of str
+            Communication scopes for agent→app direction
 
-        Returns:
-            Channel establishment result with tokens
+        Returns
+        -------
+        dict
+            Channel establishment result:
+            - 'success' : bool
+                Whether channel was established
+            - 'channel_id' : str
+                Unique channel identifier
+            - 'agent_to_app_token' : str
+                Token for agent→app requests
+            - 'app_to_agent_token' : str
+                Token for app→agent callbacks
+            - 'expires_in' : int
+                Token lifetime in seconds
+            - 'capabilities' : dict
+                Channel capabilities (send_requests, receive_callbacks, streaming)
+            - 'error' : str
+                Error message (if failed)
+
+        Notes
+        -----
+        Bidirectional Channel Features:
+        - Paired token creation for both directions
+        - Agent→App: Uses specified scopes
+        - App→Agent: Uses 'xaa:callback' scope
+        - Both tokens expire after 1 hour (3600 seconds)
+        - Channel ID format: channel_{agent_id}_{app_id}_{timestamp}
+
+        Future enhancements will include streaming support.
+
+        Examples
+        --------
+        >>> channel = await xaa.establish_bidirectional_channel(
+        ...     agent_id="agent_123",
+        ...     app_id="crm_app",
+        ...     scopes={AccessScope.READ, AccessScope.WRITE}
+        ... )
+        >>> if channel['success']:
+        ...     agent_token = channel['agent_to_app_token']
+        ...     callback_token = channel['app_to_agent_token']
         """
         # Verify app is registered
         app = self.applications.get(app_id)
@@ -786,6 +1343,17 @@ class XAAProtocol:
         }
 
     async def close(self):
-        """Close resources"""
+        """
+        Close resources.
+
+        Properly closes HTTP session used for Okta integration
+        to prevent resource leaks.
+
+        Notes
+        -----
+        Should be called when XAAProtocol instance is no longer needed,
+        especially in long-running applications. Only closes session
+        if Okta integration was configured.
+        """
         if hasattr(self, "session"):
             await self.session.close()

@@ -23,7 +23,27 @@ from subzero.config.defaults import settings
 
 
 class LimitType(str, Enum):
-    """Types of rate limits"""
+    """
+    Rate limit scope types for controlling access patterns.
+
+    Defines different granularities for applying rate limits to incoming
+    requests. Each type uses a different identifier for tracking usage.
+
+    Attributes
+    ----------
+    PER_USER : str
+        Rate limit per authenticated user ID. Tracks requests individually
+        for each user account.
+    PER_IP : str
+        Rate limit per client IP address. Useful for protecting against
+        distributed attacks or limiting anonymous users.
+    PER_ENDPOINT : str
+        Rate limit per API endpoint. Controls traffic to specific routes
+        regardless of user or IP.
+    GLOBAL : str
+        Global rate limit across the entire application. Provides system-wide
+        protection against traffic spikes.
+    """
 
     PER_USER = "per_user"
     PER_IP = "per_ip"
@@ -33,7 +53,32 @@ class LimitType(str, Enum):
 
 @dataclass
 class RateLimit:
-    """Rate limit configuration"""
+    """
+    Rate limit configuration parameters.
+
+    Defines the constraints for rate limiting including request capacity,
+    time window, and burst allowance for handling traffic spikes.
+
+    Attributes
+    ----------
+    requests : int
+        Maximum number of requests allowed within the time window under
+        normal conditions.
+    window : int
+        Time window in seconds for counting requests. After this period,
+        the counter resets.
+    burst : int, default 0
+        Additional requests allowed beyond the base limit to accommodate
+        short-term traffic bursts. Total capacity is requests + burst.
+
+    Examples
+    --------
+    Create a rate limit allowing 100 requests per minute with 20 burst:
+
+    >>> limit = RateLimit(requests=100, window=60, burst=20)
+    >>> limit.requests
+    100
+    """
 
     requests: int  # Number of requests allowed
     window: int  # Time window in seconds
@@ -42,17 +87,63 @@ class RateLimit:
 
 class TokenBucket:
     """
-    Token bucket algorithm implementation
-    Allows burst traffic while maintaining average rate
+    Token bucket algorithm for rate limiting with burst support.
+
+    Implements the classic token bucket algorithm that allows controlled
+    burst traffic while maintaining a specified average rate. Tokens are
+    refilled at a constant rate, and each request consumes one or more tokens.
+
+    Parameters
+    ----------
+    rate : float
+        Token refill rate in tokens per second. Determines the sustained
+        throughput allowed by the bucket.
+    capacity : int
+        Maximum number of tokens the bucket can hold. Controls the maximum
+        burst size allowed.
+
+    Attributes
+    ----------
+    rate : float
+        Token refill rate (tokens per second).
+    capacity : int
+        Maximum bucket capacity.
+    tokens : float
+        Current number of tokens available in the bucket.
+    last_refill : float
+        Timestamp of the last token refill operation.
+
+    Notes
+    -----
+    The token bucket algorithm provides smooth rate limiting by:
+    1. Refilling tokens at a constant rate
+    2. Allowing requests to consume tokens if available
+    3. Permitting bursts up to the capacity limit
+
+    This is more flexible than fixed window counters as it allows natural
+    traffic bursts while preventing sustained overload.
+
+    Examples
+    --------
+    Create a bucket allowing 10 requests/second with burst capacity of 50:
+
+    >>> bucket = TokenBucket(rate=10.0, capacity=50)
+    >>> bucket.consume(1)  # Consume one token
+    True
+    >>> bucket.consume(100)  # Try to consume more than capacity
+    False
     """
 
     def __init__(self, rate: float, capacity: int):
         """
-        Initialize token bucket
+        Initialize token bucket.
 
-        Args:
-            rate: Token refill rate (tokens per second)
-            capacity: Maximum bucket capacity
+        Parameters
+        ----------
+        rate : float
+            Token refill rate (tokens per second)
+        capacity : int
+            Maximum bucket capacity
         """
         self.rate = rate
         self.capacity = capacity
@@ -61,13 +152,29 @@ class TokenBucket:
 
     def consume(self, tokens: int = 1) -> bool:
         """
-        Attempt to consume tokens
+        Attempt to consume tokens from the bucket.
 
-        Args:
-            tokens: Number of tokens to consume
+        Refills the bucket based on elapsed time, then checks if enough
+        tokens are available. If so, consumes them and returns True.
 
-        Returns:
-            True if tokens available, False otherwise
+        Parameters
+        ----------
+        tokens : int, default 1
+            Number of tokens to consume for this request
+
+        Returns
+        -------
+        bool
+            True if tokens were available and consumed, False if insufficient
+            tokens available
+
+        Examples
+        --------
+        >>> bucket = TokenBucket(rate=5.0, capacity=10)
+        >>> bucket.consume(3)
+        True
+        >>> bucket.tokens
+        7.0
         """
         self._refill()
 
@@ -78,7 +185,12 @@ class TokenBucket:
         return False
 
     def _refill(self):
-        """Refill tokens based on elapsed time"""
+        """
+        Refill tokens based on elapsed time.
+
+        Calculates tokens to add based on time elapsed since last refill
+        and the configured refill rate. Caps total tokens at capacity.
+        """
         now = time.time()
         elapsed = now - self.last_refill
 
@@ -91,13 +203,34 @@ class TokenBucket:
 
     def get_wait_time(self, tokens: int = 1) -> float:
         """
-        Get time to wait until tokens available
+        Calculate wait time until requested tokens become available.
 
-        Args:
-            tokens: Number of tokens needed
+        Useful for implementing retry logic or providing feedback to users
+        about when they can make the next request.
 
-        Returns:
-            Wait time in seconds
+        Parameters
+        ----------
+        tokens : int, default 1
+            Number of tokens needed for the next request
+
+        Returns
+        -------
+        float
+            Wait time in seconds until the requested tokens will be available.
+            Returns 0.0 if tokens are already available.
+
+        Notes
+        -----
+        The wait time is calculated as: (tokens_needed - current_tokens) / rate
+        This assumes constant refill rate and no other token consumption.
+
+        Examples
+        --------
+        >>> bucket = TokenBucket(rate=10.0, capacity=20)
+        >>> bucket.consume(20)  # Consume all tokens
+        True
+        >>> bucket.get_wait_time(10)  # How long until 10 tokens available?
+        1.0
         """
         self._refill()
 
@@ -110,17 +243,79 @@ class TokenBucket:
 
 class DistributedRateLimiter:
     """
-    Distributed rate limiter using Redis
-    Implements token bucket and sliding window algorithms
+    Distributed rate limiter using Redis for coordination.
+
+    Implements both token bucket (local, in-memory) and sliding window
+    (Redis-backed) algorithms to provide high-performance distributed
+    rate limiting across multiple application instances.
+
+    The limiter uses a two-tier approach:
+    1. Hot keys are cached locally with token buckets for fast checking
+    2. Cold keys use Redis sliding windows for accurate distributed limits
+
+    Parameters
+    ----------
+    redis_url : str, optional
+        Redis connection URL. Defaults to settings.REDIS_URL if not provided.
+    default_limits : dict[LimitType, RateLimit], optional
+        Default rate limit configurations for each limit type. If not provided,
+        uses sensible defaults from application settings.
+
+    Attributes
+    ----------
+    redis_url : str
+        Redis connection URL being used.
+    redis : redis.asyncio.Redis
+        Async Redis client instance.
+    default_limits : dict[LimitType, RateLimit]
+        Configured rate limits for each limit type.
+    local_buckets : dict[str, TokenBucket]
+        In-memory token buckets for frequently accessed keys.
+    requests_allowed : int
+        Counter for allowed requests (metrics).
+    requests_denied : int
+        Counter for denied requests (metrics).
+
+    Notes
+    -----
+    Performance characteristics:
+    - Local bucket checks: ~10-50 microseconds
+    - Redis sliding window checks: ~1-5 milliseconds
+    - Automatically promotes hot keys to local buckets
+    - Fails open if Redis is unavailable (allows requests)
+
+    The sliding window algorithm provides more accurate rate limiting than
+    fixed windows by tracking individual request timestamps in Redis sorted sets.
+
+    Examples
+    --------
+    Basic usage with default configuration:
+
+    >>> limiter = DistributedRateLimiter()
+    >>> allowed, metadata = await limiter.check_rate_limit("user_123", LimitType.PER_USER)
+    >>> if allowed:
+    ...     print(f"Request allowed, {metadata['remaining']} remaining")
+
+    Custom rate limit:
+
+    >>> custom_limit = RateLimit(requests=50, window=60, burst=10)
+    >>> allowed, metadata = await limiter.check_rate_limit(
+    ...     "user_456",
+    ...     LimitType.PER_USER,
+    ...     custom_limit=custom_limit
+    ... )
     """
 
     def __init__(self, redis_url: str = None, default_limits: dict[LimitType, RateLimit] | None = None):
         """
-        Initialize rate limiter
+        Initialize distributed rate limiter.
 
-        Args:
-            redis_url: Redis connection URL
-            default_limits: Default rate limit configurations
+        Parameters
+        ----------
+        redis_url : str, optional
+            Redis connection URL
+        default_limits : dict[LimitType, RateLimit], optional
+            Default rate limit configurations
         """
         self.redis_url = redis_url or settings.REDIS_URL
 
@@ -157,15 +352,62 @@ class DistributedRateLimiter:
         self, key: str, limit_type: LimitType = LimitType.PER_USER, custom_limit: RateLimit | None = None
     ) -> tuple[bool, dict]:
         """
-        Check if request is within rate limit
+        Check if a request is within the configured rate limit.
 
-        Args:
-            key: Identifier (user_id, IP, etc.)
-            limit_type: Type of rate limit to apply
-            custom_limit: Optional custom rate limit
+        Uses a two-tier strategy: first checks local token bucket for hot
+        keys (fast path), then falls back to Redis sliding window for cold
+        keys or when local bucket is exhausted.
 
-        Returns:
-            Tuple of (allowed, metadata)
+        Parameters
+        ----------
+        key : str
+            Identifier for the rate limit (user_id, IP address, etc.)
+        limit_type : LimitType, default LimitType.PER_USER
+            Type of rate limit to apply
+        custom_limit : RateLimit, optional
+            Custom rate limit to use instead of default for this limit_type
+
+        Returns
+        -------
+        tuple[bool, dict]
+            A tuple containing:
+            - allowed : bool
+                True if request is within limit, False if rate limit exceeded
+            - metadata : dict
+                Dictionary with rate limit information:
+                - 'source' : str
+                    Where the check was performed ('local_bucket', 'sliding_window', etc.)
+                - 'remaining' : int
+                    Number of requests remaining in current window
+                - 'latency_ms' : float
+                    Time taken for the rate limit check in milliseconds
+                - 'current_count' : int (sliding_window only)
+                    Current number of requests in the window
+                - 'limit' : int
+                    Maximum requests allowed
+                - 'window_seconds' : int
+                    Time window in seconds
+                - 'reset_at' : float (sliding_window only)
+                    Unix timestamp when the window resets
+
+        Notes
+        -----
+        Performance optimization: Hot keys (frequently accessed) are promoted
+        to local token buckets for sub-millisecond checks. This reduces Redis
+        load and improves response times.
+
+        Examples
+        --------
+        Check rate limit for a user:
+
+        >>> allowed, metadata = await limiter.check_rate_limit("user_123", LimitType.PER_USER)
+        >>> if not allowed:
+        ...     print(f"Rate limited! Try again in {metadata.get('reset_at', 0)} seconds")
+
+        Check with custom limit:
+
+        >>> custom = RateLimit(requests=10, window=60, burst=2)
+        >>> allowed, meta = await limiter.check_rate_limit("192.168.1.1", LimitType.PER_IP, custom)
         """
         start_time = time.perf_counter()
 
@@ -209,15 +451,40 @@ class DistributedRateLimiter:
 
     async def _check_sliding_window(self, key: str, rate_limit: RateLimit, limit_type: LimitType) -> tuple[bool, dict]:
         """
-        Sliding window rate limit check using Redis
+        Perform sliding window rate limit check using Redis sorted sets.
 
-        Args:
-            key: Identifier
-            rate_limit: Rate limit configuration
-            limit_type: Limit type
+        Implements the sliding window algorithm by storing request timestamps
+        in a Redis sorted set and counting requests within the current window.
 
-        Returns:
-            Tuple of (allowed, metadata)
+        Parameters
+        ----------
+        key : str
+            Identifier for the rate limit
+        rate_limit : RateLimit
+            Rate limit configuration to apply
+        limit_type : LimitType
+            Type of limit being checked
+
+        Returns
+        -------
+        tuple[bool, dict]
+            A tuple containing:
+            - allowed : bool
+                True if request is within limit
+            - metadata : dict
+                Dictionary with detailed limit information
+
+        Notes
+        -----
+        Algorithm steps:
+        1. Remove expired entries (older than window start)
+        2. Count remaining entries (current request count)
+        3. Add current request timestamp
+        4. Compare count against limit + burst capacity
+        5. Set expiration on the sorted set
+
+        Uses Redis pipeline for atomic operations and reduced round trips.
+        Fails open if Redis is unavailable to prevent complete service outage.
         """
         current_time = time.time()
         window_start = current_time - rate_limit.window
@@ -265,11 +532,22 @@ class DistributedRateLimiter:
 
     async def reset_rate_limit(self, key: str, limit_type: LimitType):
         """
-        Reset rate limit for a key
+        Reset rate limit counters for a specific key.
 
-        Args:
-            key: Identifier
-            limit_type: Limit type
+        Clears both Redis-based sliding window data and local token bucket
+        cache for the specified key and limit type. Useful for admin operations
+        or testing.
+
+        Parameters
+        ----------
+        key : str
+            Identifier to reset (user_id, IP address, etc.)
+        limit_type : LimitType
+            Type of rate limit to reset
+
+        Examples
+        --------
+        >>> await limiter.reset_rate_limit("user_123", LimitType.PER_USER)
         """
         redis_key = f"rate_limit:{limit_type.value}:{key}"
         bucket_key = f"{limit_type.value}:{key}"
@@ -283,14 +561,44 @@ class DistributedRateLimiter:
 
     async def get_current_usage(self, key: str, limit_type: LimitType) -> dict:
         """
-        Get current rate limit usage for a key
+        Get current rate limit usage statistics for a key.
 
-        Args:
-            key: Identifier
-            limit_type: Limit type
+        Queries Redis to retrieve the current request count and calculates
+        remaining capacity, usage percentage, and other metrics.
 
-        Returns:
-            Usage statistics
+        Parameters
+        ----------
+        key : str
+            Identifier to check (user_id, IP address, etc.)
+        limit_type : LimitType
+            Type of rate limit to query
+
+        Returns
+        -------
+        dict
+            Usage statistics dictionary containing:
+            - 'current_count' : int
+                Number of requests in the current window
+            - 'limit' : int
+                Base request limit (without burst)
+            - 'burst_allowance' : int
+                Additional burst capacity
+            - 'total_capacity' : int
+                Maximum requests allowed (limit + burst)
+            - 'remaining' : int
+                Remaining request capacity
+            - 'window_seconds' : int
+                Time window in seconds
+            - 'usage_percent' : float
+                Percentage of capacity used (0-100)
+            - 'error' : str (only if error occurred)
+                Error message if retrieval failed
+
+        Examples
+        --------
+        >>> usage = await limiter.get_current_usage("user_123", LimitType.PER_USER)
+        >>> print(f"Used {usage['current_count']}/{usage['total_capacity']} requests")
+        >>> print(f"Usage: {usage['usage_percent']:.1f}%")
         """
         redis_key = f"rate_limit:{limit_type.value}:{key}"
         rate_limit = self.default_limits.get(limit_type)
@@ -321,7 +629,33 @@ class DistributedRateLimiter:
             return {"error": str(e)}
 
     async def get_global_stats(self) -> dict:
-        """Get global rate limiter statistics"""
+        """
+        Get global rate limiter statistics and metrics.
+
+        Aggregates statistics across all rate limit operations performed
+        by this limiter instance.
+
+        Returns
+        -------
+        dict
+            Global statistics dictionary containing:
+            - 'requests_allowed' : int
+                Total number of allowed requests
+            - 'requests_denied' : int
+                Total number of denied requests
+            - 'deny_rate_percent' : float
+                Percentage of requests denied (0-100)
+            - 'local_buckets' : int
+                Number of active local token buckets
+            - 'configured_limits' : dict
+                Dictionary of configured limits for each limit type
+
+        Examples
+        --------
+        >>> stats = await limiter.get_global_stats()
+        >>> print(f"Deny rate: {stats['deny_rate_percent']:.2f}%")
+        >>> print(f"Local buckets: {stats['local_buckets']}")
+        """
         total_requests = self.requests_allowed + self.requests_denied
         deny_rate = (self.requests_denied / max(total_requests, 1)) * 100
 
@@ -337,7 +671,12 @@ class DistributedRateLimiter:
         }
 
     async def close(self):
-        """Close Redis connection"""
+        """
+        Close Redis connection and cleanup resources.
+
+        Should be called when shutting down the application to properly
+        release Redis connections.
+        """
         await self.redis.close()
 
 
@@ -346,13 +685,67 @@ class DistributedRateLimiter:
 
 def rate_limit(limit_type: LimitType = LimitType.PER_USER, requests: int = None, window: int = None):
     """
-    Decorator for rate limiting FastAPI endpoints
+    Decorator for applying rate limits to FastAPI endpoints.
 
-    Usage:
-        @app.get("/api/endpoint")
-        @rate_limit(LimitType.PER_USER, requests=100, window=60)
-        async def endpoint(request: Request):
-            ...
+    Automatically checks rate limits before executing the endpoint handler.
+    Raises HTTPException with 429 status code if rate limit is exceeded.
+    Adds rate limit information to response headers.
+
+    Parameters
+    ----------
+    limit_type : LimitType, default LimitType.PER_USER
+        Type of rate limit to apply (per user, per IP, etc.)
+    requests : int, optional
+        Custom number of requests allowed. If not specified, uses default
+        from limiter configuration.
+    window : int, optional
+        Custom time window in seconds. If not specified, uses default from
+        limiter configuration.
+
+    Returns
+    -------
+    callable
+        Decorated function with rate limiting applied
+
+    Notes
+    -----
+    The decorator:
+    - Extracts the Request object from function arguments
+    - Determines the rate limit key based on limit_type
+    - Creates a DistributedRateLimiter instance for each request
+    - Checks the rate limit before executing the handler
+    - Adds X-RateLimit-* headers to successful responses
+    - Raises HTTPException(429) if limit exceeded
+
+    Response headers added:
+    - X-RateLimit-Limit: Maximum requests allowed
+    - X-RateLimit-Remaining: Requests remaining in window
+    - X-RateLimit-Reset: Unix timestamp when limit resets
+
+    Examples
+    --------
+    Apply default per-user rate limiting:
+
+    >>> from fastapi import FastAPI, Request
+    >>> app = FastAPI()
+    >>> @app.get("/api/data")
+    ... @rate_limit(LimitType.PER_USER)
+    ... async def get_data(request: Request):
+    ...     return {"data": "some data"}
+
+    Apply custom rate limit (10 requests per minute):
+
+    >>> @app.post("/api/upload")
+    ... @rate_limit(LimitType.PER_IP, requests=10, window=60)
+    ... async def upload_file(request: Request):
+    ...     return {"status": "uploaded"}
+
+    Apply global rate limit:
+
+    >>> @app.get("/api/public")
+    ... @rate_limit(LimitType.GLOBAL, requests=1000, window=60)
+    ... async def public_endpoint(request: Request):
+    ...     return {"message": "hello"}
     """
 
     def decorator(func):
