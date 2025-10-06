@@ -65,8 +65,6 @@ docs/build/
 
 # Archives
 archive/
-*.md
-!readme.md
 
 # CI/CD
 .github/
