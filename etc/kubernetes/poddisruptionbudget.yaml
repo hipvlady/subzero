@@ -1,0 +1,20 @@
+# Copyright (c) Subzero Development Team.
+# Distributed under the terms of the Modified BSD License.
+
+# PodDisruptionBudget for Subzero Gateway
+# Ensures high availability during voluntary disruptions (node maintenance, cluster upgrades)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: subzero-gateway-pdb
+  namespace: subzero
+  labels:
+    app: subzero
+    component: gateway
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: subzero
+      component: gateway
+  unhealthyPodEvictionPolicy: IfHealthyBudget

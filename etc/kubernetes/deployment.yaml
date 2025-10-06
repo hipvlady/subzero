@@ -10,7 +10,7 @@ metadata:
   labels:
     app: subzero
     component: gateway
-    version: v0.1.0
+    version: v1.0.0
 spec:
   replicas: 3
   selector:
@@ -27,7 +27,7 @@ spec:
       labels:
         app: subzero
         component: gateway
-        version: v0.1.0
+        version: v1.0.0
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8000"
@@ -43,7 +43,7 @@ spec:
 
       containers:
       - name: subzero-gateway
-        image: subzero:0.1.0
+        image: subzero:1.0.0
         imagePullPolicy: IfNotPresent
 
         ports:

@@ -11,7 +11,7 @@ metadata:
     app: subzero
 data:
   # Auth0 Configuration (non-sensitive)
-  auth0-audience: "https://api.subzero.dev"
+  auth0-audience: "YOUR_AUTH0_AUDIENCE"
   fga-api-url: "https://api.us1.fga.dev"
 
   # Performance Settings
