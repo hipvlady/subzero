@@ -22,7 +22,7 @@ We take the security of Subzero seriously. If you believe you have found a secur
 
 ### How to Report
 
-1. **Email**: Send details to [security@subzero.dev](mailto:security@subzero.dev)
+1. **Email**: Send details to [vlad@fwdinc.net](mailto:vlad@fwdinc.net)
 2. **Subject**: Include "SECURITY" in the subject line
 3. **Details**: Provide as much information as possible (see below)
 
@@ -182,8 +182,8 @@ Configuration options available for compliance modes.
 ## Security Advisories
 
 Security advisories are published at:
-- GitHub Security Advisories: https://github.com/subzero-dev/subzero/security/advisories
-- Mailing list: security-announce@subzero.dev
+- GitHub Security Advisories: https://github.com/hipvlady/subzero/security/advisories
+- Email: vlad@fwdinc.net
 
 Subscribe to receive security updates.
 
@@ -197,9 +197,9 @@ We currently do not have a bug bounty program, but we deeply appreciate security
 
 ## Contact
 
-- **Security issues**: security@subzero.dev
-- **General questions**: dev@subzero.dev
-- **GitHub**: https://github.com/subzero-dev/subzero
+- **Security issues**: vlad@fwdinc.net
+- **General questions**: vlad@fwdinc.net
+- **GitHub**: https://github.com/hipvlady/subzero
 
 ## Additional Resources
 

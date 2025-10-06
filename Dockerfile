@@ -43,11 +43,16 @@ RUN pip install --no-cache-dir --user .
 # ========================================
 FROM python:3.11-slim
 
+# Re-declare build arguments for this stage
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+
 # Set labels for image metadata
 LABEL org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.authors="Subzero Development Team <dev@subzero.dev>" \
-      org.opencontainers.image.url="https://github.com/subzero-dev/subzero" \
-      org.opencontainers.image.source="https://github.com/subzero-dev/subzero" \
+      org.opencontainers.image.authors="Vlad Parakhin <vlad@fwdinc.net>" \
+      org.opencontainers.image.url="https://github.com/hipvlady/subzero" \
+      org.opencontainers.image.source="https://github.com/hipvlady/subzero" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.vendor="Subzero" \

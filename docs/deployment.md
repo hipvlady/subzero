@@ -97,7 +97,7 @@ curl http://localhost:8000/health
 
 ```bash
 # Clone repository
-git clone https://github.com/vladparakhin/subzero.git
+git clone https://github.com/hipvlady/subzero.git
 cd subzero
 
 # Copy environment template

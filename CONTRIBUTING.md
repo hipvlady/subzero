@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Subzero! This document provides g
 
 ## Code of Conduct
 
-This project adheres to a code of conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to dev@subzero.dev.
+This project adheres to a code of conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to vlad@fwdinc.net.
 
 ### Our Standards
 
@@ -37,7 +37,7 @@ This project adheres to a code of conduct. By participating, you are expected to
 1. **Fork and clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/subzero.git
+   git clone https://github.com/hipvlady/subzero.git
    cd subzero
    ```
 
@@ -378,7 +378,7 @@ We follow [Semantic Versioning](https://semver.org/):
 - Use environment variables for configuration
 - Follow OWASP security guidelines
 - Include security tests for authentication/authorization
-- Report security issues privately to security@subzero.dev
+- Report security issues privately to vlad@fwdinc.net
 
 ### Documentation
 
@@ -390,10 +390,10 @@ We follow [Semantic Versioning](https://semver.org/):
 
 ## Getting Help
 
-- **Documentation**: https://subzero.readthedocs.io
-- **Issues**: https://github.com/subzero-dev/subzero/issues
-- **Discussions**: https://github.com/subzero-dev/subzero/discussions
-- **Email**: dev@subzero.dev
+- **Documentation**: https://github.com/hipvlady/subzero/blob/main/README.md
+- **Issues**: https://github.com/hipvlady/subzero/issues
+- **Discussions**: https://github.com/hipvlady/subzero/discussions
+- **Email**: vlad@fwdinc.net
 
 ## Recognition
 

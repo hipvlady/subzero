@@ -1112,9 +1112,9 @@ with tracer.start_as_current_span("authenticate") as span:
 
 ### Community Support
 
-- **GitHub Issues**: https://github.com/subzero-dev/subzero/issues
-- **Documentation**: https://subzero.readthedocs.io
-- **Examples**: https://github.com/subzero-dev/subzero/tree/main/examples
+- **GitHub Issues**: https://github.com/hipvlady/subzero/issues
+- **Documentation**: https://github.com/hipvlady/subzero/blob/main/README.md
+- **Examples**: https://github.com/hipvlady/subzero/tree/main/examples
 
 ### Reporting Bugs
 

@@ -655,7 +655,7 @@ class MCPOAuthProvider:
             "code_challenge_methods_supported": ["S256"],  # PKCE support
             "scopes_supported": ["openid", "profile", "email", "offline_access", "mcp:agent", "mcp:delegate"],
             "claims_supported": ["sub", "iss", "aud", "exp", "iat", "agent_id"],
-            "service_documentation": "https://docs.subzero.dev/mcp/oauth",
+            "service_documentation": "https://github.com/hipvlady/subzero/blob/main/README.md",
             "ui_locales_supported": ["en-US"],
         }
 

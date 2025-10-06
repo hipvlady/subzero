@@ -10,7 +10,7 @@ This project exists thanks to all the people who contribute to Subzero.
 ## 🏆 Core Team
 
 ### Project Lead
-- **Vlad Parakhin** ([@vladparakhin](https://github.com/vladparakhin)) - Project creator and lead maintainer
+- **Vlad Parakhin** ([@hipvlady](https://github.com/hipvlady)) - Project creator and lead maintainer
 
 ## 💻 Contributors
 
@@ -21,7 +21,7 @@ We welcome contributions from the community! This list recognizes all those who 
 Thank you to everyone who has submitted code, documentation, or other improvements:
 
 <!-- This section will be automatically updated -->
-- See the [GitHub Contributors](https://github.com/subzero-dev/subzero/graphs/contributors) page for a complete list
+- See the [GitHub Contributors](https://github.com/hipvlady/subzero/graphs/contributors) page for a complete list
 
 ### Documentation Contributors
 
@@ -77,10 +77,10 @@ We value all types of contributions:
 
 ## 📞 Contact
 
-- **GitHub**: https://github.com/subzero-dev/subzero
-- **Issues**: https://github.com/subzero-dev/subzero/issues
-- **Discussions**: https://github.com/subzero-dev/subzero/discussions
-- **Email**: dev@subzero.dev
+- **GitHub**: https://github.com/hipvlady/subzero
+- **Issues**: https://github.com/hipvlady/subzero/issues
+- **Discussions**: https://github.com/hipvlady/subzero/discussions
+- **Email**: vlad@fwdinc.net
 
 ---
 

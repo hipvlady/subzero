@@ -3,7 +3,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a393.svg)](https://fastapi.tiangolo.com)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/vladparakhin/subzero)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/hipvlady/subzero)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 **Zero Trust API Gateway with Enterprise-Grade Performance**
@@ -57,7 +57,7 @@ Subzero is a high-performance, AI-native Zero Trust API gateway built on modern 
 pip install subzero
 
 # Or install in development mode
-git clone https://github.com/vladparakhin/subzero.git
+git clone https://github.com/hipvlady/subzero.git
 cd subzero
 pip install -e ".[dev]"
 ```
@@ -340,7 +340,7 @@ pytest --cov=subzero --cov-report=html
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Send details to [security@subzero.dev](mailto:security@subzero.dev) with:
+Send details to [vlad@fwdinc.net](mailto:vlad@fwdinc.net) with:
 - Type of vulnerability
 - Affected components
 - Steps to reproduce
@@ -372,7 +372,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 ```bash
 # Clone repository
-git clone https://github.com/vladparakhin/subzero.git
+git clone https://github.com/hipvlady/subzero.git
 cd subzero
 
 # Install development dependencies
@@ -424,9 +424,9 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## 💬 Community & Support
 
-- **GitHub Issues:** [Report bugs or request features](https://github.com/vladparakhin/subzero/issues)
-- **Discussions:** [Ask questions and share ideas](https://github.com/vladparakhin/subzero/discussions)
-- **Email:** dev@subzero.dev
+- **GitHub Issues:** [Report bugs or request features](https://github.com/hipvlady/subzero/issues)
+- **Discussions:** [Ask questions and share ideas](https://github.com/hipvlady/subzero/discussions)
+- **Email:** vlad@fwdinc.net
 - **Documentation:** [Complete documentation](docs/)
 
 ## 🌟 Key Metrics

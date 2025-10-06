@@ -284,10 +284,10 @@ When upgrading to 1.0.0, please note the following breaking changes:
 
 ---
 
-[Unreleased]: https://github.com/subzero-dev/subzero/compare/v1.0.1...HEAD
-[1.0.1]: https://github.com/subzero-dev/subzero/releases/tag/v1.0.1
-[1.0.0]: https://github.com/subzero-dev/subzero/releases/tag/v1.0.0
-[0.1.0]: https://github.com/subzero-dev/subzero/releases/tag/v0.1.0
+[Unreleased]: https://github.com/hipvlady/subzero/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/hipvlady/subzero/releases/tag/v1.0.1
+[1.0.0]: https://github.com/hipvlady/subzero/releases/tag/v1.0.0
+[0.1.0]: https://github.com/hipvlady/subzero/releases/tag/v0.1.0
 
 ---
 

@@ -12,7 +12,7 @@ description = "Zero Trust API Gateway with Enterprise-Grade Performance"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Subzero Development Team", email = "dev@subzero.dev"}
+    {name = "Vlad Parakhin", email = "vlad@fwdinc.net"}
 ]
 keywords = [
     "zero-trust",
@@ -93,11 +93,11 @@ testing = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/subzero-dev/subzero"
-Documentation = "https://subzero.readthedocs.io"
-Repository = "https://github.com/subzero-dev/subzero"
-"Bug Tracker" = "https://github.com/subzero-dev/subzero/issues"
-Changelog = "https://github.com/subzero-dev/subzero/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/hipvlady/subzero"
+Documentation = "https://github.com/hipvlady/subzero/blob/main/README.md"
+Repository = "https://github.com/hipvlady/subzero"
+"Bug Tracker" = "https://github.com/hipvlady/subzero/issues"
+Changelog = "https://github.com/hipvlady/subzero/blob/main/CHANGELOG.md"
 
 [project.scripts]
 subzero = "subzero.__main__:main"

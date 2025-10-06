@@ -28,9 +28,9 @@ setup(
     description="Zero Trust API Gateway with Enterprise-Grade Performance",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/subzero-dev/subzero",
-    author="Subzero Development Team",
-    author_email="dev@subzero.dev",
+    url="https://github.com/hipvlady/subzero",
+    author="Vlad Parakhin",
+    author_email="vlad@fwdinc.net",
     license="MIT",
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -88,9 +88,9 @@ setup(
     include_package_data=True,
     zip_safe=False,
     project_urls={
-        "Bug Reports": "https://github.com/subzero-dev/subzero/issues",
-        "Source": "https://github.com/subzero-dev/subzero",
-        "Documentation": "https://subzero.readthedocs.io",
-        "Changelog": "https://github.com/subzero-dev/subzero/blob/main/CHANGELOG.md",
+        "Bug Reports": "https://github.com/hipvlady/subzero/issues",
+        "Source": "https://github.com/hipvlady/subzero",
+        "Documentation": "https://github.com/hipvlady/subzero/blob/main/README.md",
+        "Changelog": "https://github.com/hipvlady/subzero/blob/main/CHANGELOG.md",
     },
 )

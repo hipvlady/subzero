@@ -441,7 +441,6 @@ if __name__ == "__main__":
 ## Related Documentation
 
 - [Performance Tests](../performance/README.md) - Performance benchmarks
-- [Scripts README](../../scripts/README.md) - Utility scripts
 - [Project README](../../README.md) - Main project documentation
 - [API Documentation](../../docs/api.md) - API endpoint reference
 
