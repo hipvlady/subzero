@@ -516,7 +516,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     environment:
       name: pypi
-      url: https://pypi.org/p/subzero
+      url: https://pypi.org/p/ztag
     permissions:
       id-token: write  # Required for trusted publishing
       contents: read
@@ -633,10 +633,10 @@ jobs:
         echo "## 🎉 Release Published" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Version**: ${{ steps.extract_notes.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-        echo "**PyPI**: https://pypi.org/project/subzero/${{ steps.extract_notes.outputs.version }}/" >> $GITHUB_STEP_SUMMARY
+        echo "**PyPI**: https://pypi.org/project/ztag/${{ steps.extract_notes.outputs.version }}/" >> $GITHUB_STEP_SUMMARY
         echo "**GitHub Release**: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Installation" >> $GITHUB_STEP_SUMMARY
         echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "pip install subzero==${{ steps.extract_notes.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "pip install ztag==${{ steps.extract_notes.outputs.version }}" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY

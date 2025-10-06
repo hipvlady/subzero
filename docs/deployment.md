@@ -29,7 +29,7 @@ This guide covers deploying Subzero Zero Trust API Gateway in various environmen
 ### 1. Install from PyPI
 
 ```bash
-pip install subzero
+pip install ztag
 ```
 
 ### 2. Configure Environment

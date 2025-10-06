@@ -54,7 +54,7 @@ Subzero is a high-performance, AI-native Zero Trust API gateway built on modern 
 
 ```bash
 # Install from PyPI
-pip install subzero
+pip install ztag
 
 # Or install in development mode
 git clone https://github.com/hipvlady/subzero.git

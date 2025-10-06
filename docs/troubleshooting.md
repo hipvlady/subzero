@@ -48,8 +48,8 @@ print(sys.path)
 
 4. **Reinstall dependencies:**
 ```bash
-pip uninstall subzero
-pip install subzero
+pip uninstall ztag
+pip install ztag
 ```
 
 ---
@@ -69,7 +69,7 @@ ERROR: pip's dependency resolver does not currently take into account all the pa
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install subzero
+pip install ztag
 ```
 
 2. **Upgrade pip:**
@@ -79,7 +79,7 @@ pip install --upgrade pip setuptools wheel
 
 3. **Install with constraints:**
 ```bash
-pip install subzero --upgrade-strategy only-if-needed
+pip install ztag --upgrade-strategy only-if-needed
 ```
 
 4. **Check for conflicting packages:**

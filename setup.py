@@ -23,7 +23,7 @@ with open(path.join(here, "requirements.txt"), encoding="utf-8") as f:
     requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 setup(
-    name="subzero",
+    name="ztag",
     version=version_ns["__version__"],
     description="Zero Trust API Gateway with Enterprise-Grade Performance",
     long_description=long_description,
